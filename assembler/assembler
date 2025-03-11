@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+
+import sys
+import pre_parsers
+import tokenizer
+import parser
+
+lines = [
+    ".ORIG x3000",
+    "LEA R0, HELLO",
+    "PUTS",
+    "HALT",
+    'HELLO .STRINGZ "Hello"',
+    ".END"
+]
+
+ARGS = sys.argv
+
+def read(filename):
+    with open(filename, "r") as file:
+        return [line.rstrip('\n') for line in file]
+
+
+def write(filename, data):
+    with open(filename, "wb") as file:
+        for d in data:
+            file.write(int(d, 2).to_bytes(2))
+
+def write_txt(filename, data):
+    with open(filename, "w", encoding="utf-8") as file:
+        file.writelines(data)
+
+lines = read(ARGS[1])
+
+tokenized = tokenizer.tokenize(lines.copy())
+
+origin = pre_parsers.get_origin(tokenized)
+pre_parsers.has_end(tokenized)
+symbols = pre_parsers.symbols(tokenized, origin)
+unlabeled = pre_parsers.remove_symbols(tokenized)
+
+stmts = parser.parse(unlabeled, symbols)
+
+symbols = { f"x{v['address']:04X}":k for k,v in symbols.items() }
+table = [
+    ["ADDR", "HEX", "BINARY", "LABEL", "LINE", "CODE"]
+]
+stmt_idx = 0
+for idx,line in enumerate(lines):
+    line_num = idx + 1
+
+    stmt = stmts[stmt_idx] if stmts[stmt_idx].line == line_num else None
+    addr = f"x{stmt.addr:04X}" if stmt and stmt.addr is not None else ""
+
+    binary = stmt.resolve() if stmt else ""
+    long_binary = isinstance(binary, list)
+
+    if long_binary:
+        binary, *rest = binary
+
+    hexa = f"x{int(binary, 2):04X}" if binary else ""
+    label = symbols.get(addr, "")
+
+    if stmt:
+        stmt_idx += 1
+
+    table.append([addr, hexa, binary, label, line_num, line])
+
+    if long_binary:
+        addr = stmt.addr + 1
+        for b in rest:
+            table.append([f"x{int(addr):04X}", f"x{int(b, 2):04X}", b, "", "", ""])
+            addr += 1
+
+lst_text = []
+for row in table:
+    lst_text.append("{0:6}| {1:6}| {2:16}| {3:20}| {4:4}| {5:}\n".format(*row))
+
+binaries = []
+for b in [s.resolve() for s in stmts]:
+    if b is None or b == "":
+        continue
+    if isinstance(b, list):
+        binaries += b
+    else:
+        binaries.append(b)
+
+write(ARGS[1].replace('.asm', '.obj'), binaries)
+write_txt(ARGS[1].replace('.asm', '.sym'), [f"{v:20}{"":10}{k}\n" for k,v in symbols.items()])
+write_txt(ARGS[1].replace('.asm', '.lst'), lst_text)
+write_txt(ARGS[1].replace('.asm', '.bin'), [f"{x}\n" for x in binaries])
+write_txt(ARGS[1].replace('.asm', '.hex'), [f"{int(x, 2):04X}\n" for x in binaries])

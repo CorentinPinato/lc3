@@ -1,0 +1,55 @@
+ADDR  | HEX   | BINARY          | LABEL               | LINE| CODE
+      |       |                 |                     |    1| ; Reverse a string
+      |       |                 |                     |    2| ; Author: Corentin Pinato
+      | x3000 | 0011000000000000|                     |    3|   .ORIG x3000
+      |       |                 |                     |    4| 
+      |       |                 |                     |    5| REV
+x3000 | xE014 | 1110000000010100| REV                 |    6|   LEA R0, FILE    ; R0 is beginning of STRINGZ
+x3001 | x5240 | 0101001001000000|                     |    7|   AND R1, R1, #0  ; Set R1 to x0
+x3002 | x1C20 | 0001110000100000|                     |    8|   ADD R6, R0, #0  ; R0 backup
+      |       |                 |                     |    9| 
+      |       |                 |                     |   10| LOOP1             ; while (char != x0)
+x3003 | x6400 | 0110010000000000| LOOP1               |   11|   LDR R2, R0, #0  ; Load character value
+x3004 | x14A0 | 0001010010100000|                     |   12|   ADD R2, R2, #0  ; set flag
+x3005 | x0404 | 0000010000000100|                     |   13|   BRz END1        ; if zero flag end
+      |       |                 |                     |   14| 
+x3006 | x7441 | 0111010001000001|                     |   15|   STR R2, R1, #1  ; push char value on stack
+x3007 | x1021 | 0001000000100001|                     |   16|   ADD R0, R0, #1  ; increment R0 / String pointer
+x3008 | x1261 | 0001001001100001|                     |   17|   ADD R1, R1, #1  ; increment R1 / stack pointer
+x3009 | x0FF9 | 0000111111111001|                     |   18|   BR LOOP1        ; Jump back to beginning of loop
+      |       |                 |                     |   19| END1
+      |       |                 |                     |   20| 
+x300A | x11A0 | 0001000110100000| END1                |   21| ADD R0, R6, #0    ; set back start
+      |       |                 |                     |   22| LOOP2             ; while (stack_pointer != 0)
+x300B | x1260 | 0001001001100000| LOOP2               |   23|   ADD R1, R1, #0  ; Set flag
+x300C | x0405 | 0000010000000101|                     |   24|   BRz END2        ; if zero flag end
+      |       |                 |                     |   25| 
+x300D | x6440 | 0110010001000000|                     |   26|   LDR R2, R1, #0  ; Load stack value into R2
+x300E | x7400 | 0111010000000000|                     |   27|   STR R2, R0, #0  ; Store stack value at R0
+x300F | x1021 | 0001000000100001|                     |   28|   ADD R0, R0, #1  ; increment R0 / String pointer
+x3010 | x127F | 0001001001111111|                     |   29|   ADD R1, R1, #-1 ; Decrement R1 / stack pointer
+x3011 | x0FF9 | 0000111111111001|                     |   30|   BR LOOP2        ; Jump back at beginning of loop
+      |       |                 |                     |   31| END2
+x3012 | x11A0 | 0001000110100000| END2                |   32| ADD R0, R6, #0    ; set back start
+      |       |                 |                     |   33| 
+      |       |                 |                     |   34| DONE
+x3013 | xF022 | 1111000000100010| DONE                |   35|   PUTS
+x3014 | xF025 | 1111000000100101|                     |   36|   HALT
+      |       |                 |                     |   37| 
+x3015 | x0043 | 0000000001000011| FILE                |   38| FILE .STRINGZ "Corentin Pinato"
+x3016 | x006F | 0000000001101111|                     |     | 
+x3017 | x0072 | 0000000001110010|                     |     | 
+x3018 | x0065 | 0000000001100101|                     |     | 
+x3019 | x006E | 0000000001101110|                     |     | 
+x301A | x0074 | 0000000001110100|                     |     | 
+x301B | x0069 | 0000000001101001|                     |     | 
+x301C | x006E | 0000000001101110|                     |     | 
+x301D | x0020 | 0000000000100000|                     |     | 
+x301E | x0050 | 0000000001010000|                     |     | 
+x301F | x0069 | 0000000001101001|                     |     | 
+x3020 | x006E | 0000000001101110|                     |     | 
+x3021 | x0061 | 0000000001100001|                     |     | 
+x3022 | x0074 | 0000000001110100|                     |     | 
+x3023 | x006F | 0000000001101111|                     |     | 
+x3024 | x0000 | 0000000000000000|                     |     | 
+      |       |                 |                     |   39|      .END
