@@ -1,0 +1,17 @@
+STACK                         x3001
+STACKPNT                      x3081
+INC_PTR                       x3082
+DEC_PTR                       x3086
+PUSH_R6                       x308A
+POP_R6                        x308F
+PEEK_R6                       x3094
+MAIN                          x3096
+LOOP                          x309D
+LOOP2                         x30A3
+END2                          x30A9
+PRT_NEWLINE                   x30AA
+QUIT                          x30AF
+HELLO                         x30B0
+NEWLINE                       x30BC
+TEMP                          x30BD
+ZERO                          x30BE
