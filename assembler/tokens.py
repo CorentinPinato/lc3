@@ -37,6 +37,7 @@ class String(Token):
 
     def to_bin(self, size):
         lex = re.sub(r'\\n', "\n", self.lexeme)
+        lex = re.sub(r'\\e', "\033", lex)
         bins = [f"{ord(char):0{size}b}" for char in list(lex)[1:-1]]
         bins.append(f"{0:0{size}b}")
         return bins

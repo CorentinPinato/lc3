@@ -146,12 +146,12 @@ class Logical(Statement):
             return tokens[0].to_bin(4) + tokens[1].to_bin(3) + tokens[2].to_bin(3) + "111111"
         if size != 4:
             raise Exception(f"Error on line {self.line}: Operation takes 3 arguments, {size-1} found.")
-        if isinstance(tokens[2], Tokens.Register):
+        if isinstance(tokens[-1], Tokens.Register):
             flag = "0"
             offset = "00" + tokens[-1].to_bin(3)
         else:
             flag = "1"
-            offset = tokens[3].to_bin(5)
+            offset = tokens[-1].to_bin(5)
         return tokens[0].to_bin(4) + tokens[1].to_bin(3) + tokens[2].to_bin(3) + flag + offset
 
 class Store(Statement):
