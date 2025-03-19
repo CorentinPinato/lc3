@@ -1,0 +1,562 @@
+ADDR  | HEX   | BINARY          | LABEL               | LINE| CODE
+      |       |                 |                     |    1| ; TODO: Description
+      |       |                 |                     |    2| ; Author: Corentin Pinato
+      |       |                 |                     |    3| ; \ => backslah to start command
+      |       |                 |                     |    4| ; [Enter] => enter command
+      |       |                 |                     |    5| ; \3000 => lookup bytes on address 0x3000
+      |       |                 |                     |    6| ;  #=> 3000: 00 0A 11 BE
+      |       |                 |                     |    7| ; \3000.300A => lookup bytes in addresses from 0x3000 to 0x300A
+      |       |                 |                     |    8| ; #=> repeat above for each address
+      |       |                 |                     |    9| ; \3000:AA => write to addr. 0x3000 value AA
+      |       |                 |                     |   10| ;  #=> 3000: AA .....
+      |       |                 |                     |   11| ;
+      | x3000 | 0011000000000000|                     |   12| .ORIG x3000
+x3000 | x0E38 | 0000111000111000|                     |   13| BR MAIN
+      |       |                 |                     |   14| 
+x3001 | x3001 | 0011000000000001| STKPTR              |   15| STKPTR .FILL x3001
+x3002 | x0000 | 0000000000000000| STACK               |   16| STACK  .BLKW #10
+x3003 | x0000 | 0000000000000000|                     |     | 
+x3004 | x0000 | 0000000000000000|                     |     | 
+x3005 | x0000 | 0000000000000000|                     |     | 
+x3006 | x0000 | 0000000000000000|                     |     | 
+x3007 | x0000 | 0000000000000000|                     |     | 
+x3008 | x0000 | 0000000000000000|                     |     | 
+x3009 | x0000 | 0000000000000000|                     |     | 
+x300A | x0000 | 0000000000000000|                     |     | 
+x300B | x0000 | 0000000000000000|                     |     | 
+      |       |                 |                     |   17| 
+      |       |                 |                     |   18| STKINC
+x300C | x2BF4 | 0010101111110100| STKINC              |   19|   LD R5, STKPTR
+x300D | x1B61 | 0001101101100001|                     |   20|   ADD R5, R5, #1
+x300E | x3BF2 | 0011101111110010|                     |   21|   ST R5, STKPTR
+x300F | xC1C0 | 1100000111000000|                     |   22|   RET
+      |       |                 |                     |   23| STKDEC
+x3010 | x2BF0 | 0010101111110000| STKDEC              |   24|   LD R5, STKPTR
+x3011 | x1B7F | 0001101101111111|                     |   25|   ADD R5, R5, #-1
+x3012 | x3BEE | 0011101111101110|                     |   26|   ST R5, STKPTR
+x3013 | xC1C0 | 1100000111000000|                     |   27|   RET
+      |       |                 |                     |   28| GET_STKPTR
+x3014 | xE1EC | 1110000111101100| GET_STKPTR          |   29|   LEA R0, STKPTR
+x3015 | xC1C0 | 1100000111000000|                     |   30|   RET
+      |       |                 |                     |   31| 
+x3016 | x3018 | 0011000000011000| BUFSTRT             |   32| BUFSTRT .FILL x3018
+x3017 | x3017 | 0011000000010111| BUFPTR              |   33| BUFPTR .FILL x3017
+x3018 | x0000 | 0000000000000000| BUFFER              |   34| BUFFER .BLKW #8
+x3019 | x0000 | 0000000000000000|                     |     | 
+x301A | x0000 | 0000000000000000|                     |     | 
+x301B | x0000 | 0000000000000000|                     |     | 
+x301C | x0000 | 0000000000000000|                     |     | 
+x301D | x0000 | 0000000000000000|                     |     | 
+x301E | x0000 | 0000000000000000|                     |     | 
+x301F | x0000 | 0000000000000000|                     |     | 
+      |       |                 |                     |   35| ; Buffer size requirement:
+      |       |                 |                     |   36| ; 3000 = 4
+      |       |                 |                     |   37| ; 3000.3000 = 4 + 4 = 8
+      |       |                 |                     |   38| ; 3000: AA AA = 4 + 4 = 8
+      |       |                 |                     |   39| 
+      |       |                 |                     |   40| BUFINC
+x3020 | x2BF6 | 0010101111110110| BUFINC              |   41|   LD R5, BUFPTR
+x3021 | x1B61 | 0001101101100001|                     |   42|   ADD R5, R5, #1
+x3022 | x3BF4 | 0011101111110100|                     |   43|   ST R5, BUFPTR
+x3023 | xC1C0 | 1100000111000000|                     |   44|   RET
+      |       |                 |                     |   45| BUFPUSH
+x3024 | x1DE0 | 0001110111100000| BUFPUSH             |   46|   ADD R6, R7, #0
+x3025 | x4FFA | 0100111111111010|                     |   47|   JSR BUFINC
+x3026 | x1FA0 | 0001111110100000|                     |   48|   ADD R7, R6, #0
+x3027 | xB1EF | 1011000111101111|                     |   49|   STI R0, BUFPTR
+x3028 | xC1C0 | 1100000111000000|                     |   50|   RET
+      |       |                 |                     |   51| BUFCLEAR
+x3029 | xEBED | 1110101111101101| BUFCLEAR            |   52|   LEA R5, BUFPTR
+x302A | x3BEC | 0011101111101100|                     |   53|   ST R5, BUFPTR
+x302B | xEBEC | 1110101111101100|                     |   54|   LEA R5, BUFFER
+x302C | x3BE9 | 0011101111101001|                     |   55|   ST R5, BUFSTRT
+x302D | xC1C0 | 1100000111000000|                     |   56|   RET
+      |       |                 |                     |   57| BUFPRINT
+x302E | x1DE0 | 0001110111100000| BUFPRINT            |   58|   ADD R6, R7, #0
+      |       |                 |                     |   59| 
+x302F | x27E6 | 0010011111100110|                     |   60|   LD R3, BUFSTRT
+x3030 | x29E6 | 0010100111100110|                     |   61|   LD R4, BUFPTR
+x3031 | x993F | 1001100100111111|                     |   62|   NOT R4, R4
+      |       |                 |                     |   63| 
+      |       |                 |                     |   64|   BUFPRTLOOP
+x3032 | x60C0 | 0110000011000000| BUFPRTLOOP          |   65|     LDR R0, R3, #0
+x3033 | xF021 | 1111000000100001|                     |   66|     OUT
+      |       |                 |                     |   67| 
+x3034 | x16E1 | 0001011011100001|                     |   68|     ADD R3, R3, #1
+x3035 | x1AC4 | 0001101011000100|                     |   69|     ADD R5, R3, R4
+x3036 | x0BFB | 0000101111111011|                     |   70|     BRnp BUFPRTLOOP
+x3037 | x1FA0 | 0001111110100000|                     |   71|   ADD R7, R6, #0
+x3038 | xC1C0 | 1100000111000000|                     |   72|   RET
+      |       |                 |                     |   73| 
+      |       |                 |                     |   74| MAIN
+x3039 | x4896 | 0100100010010110| MAIN                |   75|   JSR CHECK_COMMAND
+      |       |                 |                     |   76| 
+      |       |                 |                     |   77| MONITOR_ENTER
+x303A | x20FB | 0010000011111011| MONITOR_ENTER       |   78|   LD R0, CH_NEWLN
+x303B | xF021 | 1111000000100001|                     |   79|   OUT
+      |       |                 |                     |   80| 
+      |       |                 |                     |   81| MONITOR
+x303C | xF020 | 1111000000100000| MONITOR             |   82|   GETC
+      |       |                 |                     |   83| 
+x303D | x943F | 1001010000111111|                     |   84|   NOT R2, R0
+x303E | x14A1 | 0001010010100001|                     |   85|   ADD R2, R2, #1 ; R2 = -R0
+      |       |                 |                     |   86| 
+x303F | x22F2 | 0010001011110010|                     |   87|   LD R1, CH_BSLASH
+x3040 | x1281 | 0001001010000001|                     |   88|   ADD R1, R2, R1
+x3041 | x0488 | 0000010010001000|                     |   89|   BRz EXIT_COMMAND
+      |       |                 |                     |   90| 
+x3042 | x22F3 | 0010001011110011|                     |   91|   LD R1, CH_NEWLN
+x3043 | x1281 | 0001001010000001|                     |   92|   ADD R1, R2, R1
+x3044 | x0498 | 0000010010011000|                     |   93|   BRz EXIT
+      |       |                 |                     |   94| 
+      |       |                 |                     |   95| CHECK_MODE
+x3045 | x22E8 | 0010001011101000| CHECK_MODE          |   96|   LD R1, MODE
+x3046 | x1260 | 0001001001100000|                     |   97|   ADD R1, R1, #0
+x3047 | x0A08 | 0000101000001000|                     |   98|   BRnp CHECK_CHAR
+      |       |                 |                     |   99| 
+x3048 | x943F | 1001010000111111|                     |  100|   NOT R2, R0
+x3049 | x14A1 | 0001010010100001|                     |  101|   ADD R2, R2, #1 ; R2 = -R0
+      |       |                 |                     |  102| 
+x304A | x22E9 | 0010001011101001|                     |  103|   LD R1, CH_DOT
+x304B | x1281 | 0001001010000001|                     |  104|   ADD R1, R2, R1
+x304C | x041C | 0000010000011100|                     |  105|   BRz SAVE_MODE
+      |       |                 |                     |  106| 
+x304D | x22E5 | 0010001011100101|                     |  107|   LD R1, CH_COLON
+x304E | x1281 | 0001001010000001|                     |  108|   ADD R1, R2, R1
+x304F | x0419 | 0000010000011001|                     |  109|   BRz SAVE_MODE
+      |       |                 |                     |  110| 
+      |       |                 |                     |  111| CHECK_CHAR
+x3050 | x22E9 | 0010001011101001| CHECK_CHAR          |  112|   LD R1, CH_ZERO
+x3051 | x927F | 1001001001111111|                     |  113|   NOT R1, R1
+x3052 | x1261 | 0001001001100001|                     |  114|   ADD R1, R1, #1
+x3053 | x1201 | 0001001000000001|                     |  115|   ADD R1, R0, R1
+x3054 | x09E7 | 0000100111100111|                     |  116|   BRn MONITOR
+      |       |                 |                     |  117| 
+x3055 | x22E4 | 0010001011100100|                     |  118|   LD R1, CH_ZERO
+x3056 | x1269 | 0001001001101001|                     |  119|   ADD R1, R1, #9
+x3057 | x927F | 1001001001111111|                     |  120|   NOT R1, R1
+x3058 | x1261 | 0001001001100001|                     |  121|   ADD R1, R1, #1
+x3059 | x1201 | 0001001000000001|                     |  122|   ADD R1, R0, R1
+x305A | x0C0B | 0000110000001011|                     |  123|   BRnz TAKE_CHAR
+      |       |                 |                     |  124| 
+x305B | x22D9 | 0010001011011001|                     |  125|   LD R1, CH_F
+x305C | x127B | 0001001001111011|                     |  126|   ADD R1, R1, #-5
+x305D | x927F | 1001001001111111|                     |  127|   NOT R1, R1
+x305E | x1261 | 0001001001100001|                     |  128|   ADD R1, R1, #1
+x305F | x1201 | 0001001000000001|                     |  129|   ADD R1, R0, R1
+x3060 | x09DB | 0000100111011011|                     |  130|   BRn MONITOR
+      |       |                 |                     |  131| 
+x3061 | x22D3 | 0010001011010011|                     |  132|   LD R1, CH_F
+x3062 | x927F | 1001001001111111|                     |  133|   NOT R1, R1
+x3063 | x1261 | 0001001001100001|                     |  134|   ADD R1, R1, #1
+x3064 | x1201 | 0001001000000001|                     |  135|   ADD R1, R0, R1
+x3065 | x03D6 | 0000001111010110|                     |  136|   BRp MONITOR
+      |       |                 |                     |  137| 
+      |       |                 |                     |  138| TAKE_CHAR
+x3066 | xF021 | 1111000000100001| TAKE_CHAR           |  139|   OUT
+x3067 | x4FBC | 0100111110111100|                     |  140|   JSR BUFPUSH
+x3068 | x0FD3 | 0000111111010011|                     |  141|   BR MONITOR
+      |       |                 |                     |  142| 
+      |       |                 |                     |  143| SAVE_MODE
+x3069 | xF021 | 1111000000100001| SAVE_MODE           |  144|   OUT
+x306A | x30C3 | 0011000011000011|                     |  145|   ST R0, MODE
+x306B | x0FD0 | 0000111111010000|                     |  146|   BR MONITOR
+      |       |                 |                     |  147| 
+      |       |                 |                     |  148| CHAR2NUM
+      |       |                 |                     |  149|   ; Expecting char to be in R0
+x306C | x1420 | 0001010000100000| CHAR2NUM            |  150|   ADD R2, R0, #0   ; Saving R0 value
+      |       |                 |                     |  151| 
+x306D | x22C2 | 0010001011000010|                     |  152|   LD R1, CH_A_OFF  ; 55
+x306E | x927F | 1001001001111111|                     |  153|   NOT R1, R1
+x306F | x1261 | 0001001001100001|                     |  154|   ADD R1, R1, #1   ; -55
+x3070 | x1001 | 0001000000000001|                     |  155|   ADD R0, R0, R1   ; CHAR - 65
+      |       |                 |                     |  156| 
+x3071 | x1236 | 0001001000110110|                     |  157|   ADD R1, R0, #-10
+x3072 | x0605 | 0000011000000101|                     |  158|   BRzp RETCHAR2NUM ; if char >= 65
+      |       |                 |                     |  159| 
+x3073 | x10A0 | 0001000010100000|                     |  160|   ADD R0, R2, #0   ; Reset value of R0 to original
+      |       |                 |                     |  161| 
+      |       |                 |                     |  162|   ; To reach this point char should be < 55
+      |       |                 |                     |  163|   ; relying on input code to only allow valid
+      |       |                 |                     |  164|   ; characters: therefore this char should be
+      |       |                 |                     |  165|   ; in the range of 48 to 57 inclusive.
+x3074 | x22C5 | 0010001011000101|                     |  166|   LD R1, CH_ZERO
+x3075 | x927F | 1001001001111111|                     |  167|   NOT R1, R1
+x3076 | x1261 | 0001001001100001|                     |  168|   ADD R1, R1, #1 ; -48
+x3077 | x1001 | 0001000000000001|                     |  169|   ADD R0, R0, R1 ; char - 48 
+      |       |                 |                     |  170| RETCHAR2NUM
+x3078 | xC1C0 | 1100000111000000| RETCHAR2NUM         |  171|   RET            ; Result returned in R0
+      |       |                 |                     |  172| 
+      |       |                 |                     |  173| NUM2CHAR ; Convert a number to ASCII char, using R0
+x3079 | x1620 | 0001011000100000| NUM2CHAR            |  174|   ADD R3, R0, #0
+      |       |                 |                     |  175| 
+x307A | x1036 | 0001000000110110|                     |  176|   ADD R0, R0, #-10 ; num - 10
+x307B | x0603 | 0000011000000011|                     |  177|   BRzp RETNUM2CHAR ; if num >= 10
+      |       |                 |                     |  178| 
+x307C | x20BD | 0010000010111101|                     |  179|   LD R0, CH_ZERO
+x307D | x1003 | 0001000000000011|                     |  180|   ADD R0, R0, R3
+x307E | xC1C0 | 1100000111000000|                     |  181|   RET
+      |       |                 |                     |  182| RETNUM2CHAR
+x307F | x20B0 | 0010000010110000| RETNUM2CHAR         |  183|   LD R0, CH_A_OFF
+x3080 | x1003 | 0001000000000011|                     |  184|   ADD R0, R0, R3
+x3081 | xC1C0 | 1100000111000000|                     |  185|   RET
+      |       |                 |                     |  186| 
+      |       |                 |                     |  187| ROTATE4 ; Rotate four times to the left R0.
+x3082 | x3EB9 | 0011111010111001| ROTATE4             |  188|   ST R7, TEMP
+x3083 | x4807 | 0100100000000111|                     |  189|   JSR ROTATE
+x3084 | x4806 | 0100100000000110|                     |  190|   JSR ROTATE
+x3085 | x4805 | 0100100000000101|                     |  191|   JSR ROTATE
+x3086 | x4804 | 0100100000000100|                     |  192|   JSR ROTATE
+x3087 | x2EB4 | 0010111010110100|                     |  193|   LD R7, TEMP
+      |       |                 |                     |  194| 
+x3088 | x1260 | 0001001001100000|                     |  195|   ADD R1, R1, #0
+x3089 | x0A07 | 0000101000000111|                     |  196|   BRnp ENDROTATE
+x308A | xC1C0 | 1100000111000000|                     |  197|   RET
+      |       |                 |                     |  198| 
+      |       |                 |                     |  199| ROTATE
+x308B | x22AF | 0010001010101111| ROTATE              |  200|   LD R1, MASK
+      |       |                 |                     |  201| 
+x308C | x5240 | 0101001001000000|                     |  202|   AND R1, R1, R0
+x308D | x1000 | 0001000000000000|                     |  203|   ADD R0, R0, R0
+      |       |                 |                     |  204| 
+x308E | x1260 | 0001001001100000|                     |  205|   ADD R1, R1, #0
+x308F | x0401 | 0000010000000001|                     |  206|   BRz ENDROTATE
+      |       |                 |                     |  207| 
+x3090 | x1021 | 0001000000100001|                     |  208|   ADD R0, R0, #1
+      |       |                 |                     |  209| ENDROTATE
+x3091 | xC1C0 | 1100000111000000| ENDROTATE           |  210|   RET
+      |       |                 |                     |  211| 
+      |       |                 |                     |  212| MEM2HEX
+x3092 | x19E0 | 0001100111100000| MEM2HEX             |  213|   ADD R4, R7, #0
+      |       |                 |                     |  214|  
+x3093 | x4F95 | 0100111110010101|                     |  215|   JSR BUFCLEAR
+x3094 | x5260 | 0101001001100000|                     |  216|   AND R1, R1, #0 ; Set to 0 to accumulate answer
+x3095 | x1420 | 0001010000100000|                     |  217|   ADD R2, R0, #0 ; copy R0 for future use.
+      |       |                 |                     |  218| 
+x3096 | x4FEB | 0100111111101011|                     |  219|   JSR ROTATE4
+x3097 | x502F | 0101000000101111|                     |  220|   AND R0, R0, #15
+x3098 | x4FE0 | 0100111111100000|                     |  221|   JSR NUM2CHAR
+x3099 | x4F8A | 0100111110001010|                     |  222|   JSR BUFPUSH
+      |       |                 |                     |  223| 
+x309A | x10A0 | 0001000010100000|                     |  224|   ADD R0, R2, #0
+x309B | x4FE6 | 0100111111100110|                     |  225|   JSR ROTATE4
+x309C | x4FE5 | 0100111111100101|                     |  226|   JSR ROTATE4
+x309D | x502F | 0101000000101111|                     |  227|   AND R0, R0, #15
+x309E | x4FDA | 0100111111011010|                     |  228|   JSR NUM2CHAR
+x309F | x4F84 | 0100111110000100|                     |  229|   JSR BUFPUSH
+      |       |                 |                     |  230| 
+x30A0 | x10A0 | 0001000010100000|                     |  231|   ADD R0, R2, #0
+x30A1 | x4FE0 | 0100111111100000|                     |  232|   JSR ROTATE4
+x30A2 | x4FDF | 0100111111011111|                     |  233|   JSR ROTATE4
+x30A3 | x4FDE | 0100111111011110|                     |  234|   JSR ROTATE4
+x30A4 | x502F | 0101000000101111|                     |  235|   AND R0, R0, #15
+x30A5 | x4FD3 | 0100111111010011|                     |  236|   JSR NUM2CHAR
+x30A6 | x4F7D | 0100111101111101|                     |  237|   JSR BUFPUSH
+      |       |                 |                     |  238| 
+x30A7 | x10A0 | 0001000010100000|                     |  239|   ADD R0, R2, #0
+x30A8 | x502F | 0101000000101111|                     |  240|   AND R0, R0, #15
+x30A9 | x4FCF | 0100111111001111|                     |  241|   JSR NUM2CHAR
+x30AA | x4F79 | 0100111101111001|                     |  242|   JSR BUFPUSH
+      |       |                 |                     |  243| 
+x30AB | x10A0 | 0001000010100000|                     |  244|   ADD R0, R2, #0
+x30AC | x1F20 | 0001111100100000|                     |  245|   ADD R7, R4, #0
+x30AD | xC1C0 | 1100000111000000|                     |  246|   RET
+      |       |                 |                     |  247| 
+      |       |                 |                     |  248| HEX2MEM ; Take values from buffer and return addr. in R0
+x30AE | x2767 | 0010011101100111| HEX2MEM             |  249|   LD R3, BUFSTRT  ; Starting point
+x30AF | x5B60 | 0101101101100000|                     |  250|   AND R5, R5, #0 ; Set to 0, use R3 for final addr.
+      |       |                 |                     |  251| 
+x30B0 | x60C0 | 0110000011000000|                     |  252|   LDR R0, R3, #0 ; LOAD into R0 memory pointed by R1
+x30B1 | x4FBA | 0100111110111010|                     |  253|   JSR CHAR2NUM   ; Convert R0 from char to number 
+x30B2 | x483A | 0100100000111010|                     |  254|   JSR SHIFT4
+x30B3 | x4839 | 0100100000111001|                     |  255|   JSR SHIFT4
+x30B4 | x4838 | 0100100000111000|                     |  256|   JSR SHIFT4
+x30B5 | x1B40 | 0001101101000000|                     |  257|   ADD R5, R5, R0 ; Store result at 1st (leftmost byte)
+x30B6 | x16E1 | 0001011011100001|                     |  258|   ADD R3, R3, #1 ; increment buffer addr.
+      |       |                 |                     |  259| 
+x30B7 | x60C0 | 0110000011000000|                     |  260|   LDR R0, R3, #0 ; LOAD into R0 memroy pointed by R1
+x30B8 | x4FB3 | 0100111110110011|                     |  261|   JSR CHAR2NUM   ; Convert R0 from char to number 
+x30B9 | x4833 | 0100100000110011|                     |  262|   JSR SHIFT4
+x30BA | x4832 | 0100100000110010|                     |  263|   JSR SHIFT4
+x30BB | x1B40 | 0001101101000000|                     |  264|   ADD R5, R5, R0 ; Store result at 1st (leftmost byte)
+x30BC | x16E1 | 0001011011100001|                     |  265|   ADD R3, R3, #1 ; increment buffer addr.
+      |       |                 |                     |  266| 
+x30BD | x60C0 | 0110000011000000|                     |  267|   LDR R0, R3, #0 ; LOAD into R0 memroy pointed by R1
+x30BE | x4FAD | 0100111110101101|                     |  268|   JSR CHAR2NUM   ; Convert R0 from char to number 
+x30BF | x482D | 0100100000101101|                     |  269|   JSR SHIFT4
+x30C0 | x1B40 | 0001101101000000|                     |  270|   ADD R5, R5, R0 ; Store result at 1st (leftmost byte)
+x30C1 | x16E1 | 0001011011100001|                     |  271|   ADD R3, R3, #1 ; increment buffer addr.
+      |       |                 |                     |  272| 
+x30C2 | x60C0 | 0110000011000000|                     |  273|   LDR R0, R3, #0 ; LOAD into R0 memroy pointed by R1
+x30C3 | x4FA8 | 0100111110101000|                     |  274|   JSR CHAR2NUM   ; Convert R0 from char to number 
+x30C4 | x1B40 | 0001101101000000|                     |  275|   ADD R5, R5, R0 ; Store result at 1st (leftmost byte)
+      |       |                 |                     |  276| 
+x30C5 | x1160 | 0001000101100000|                     |  277|   ADD R0, R5, #0
+x30C6 | xAD3A | 1010110100111010|                     |  278|   LDI R6, STKPTR
+x30C7 | x4F48 | 0100111101001000|                     |  279|   JSR STKDEC
+x30C8 | x1FA0 | 0001111110100000|                     |  280|   ADD R7, R6, #0
+x30C9 | xC1C0 | 1100000111000000|                     |  281|   RET
+      |       |                 |                     |  282| 
+      |       |                 |                     |  283| EXIT_COMMAND
+x30CA | x4F5E | 0100111101011110| EXIT_COMMAND        |  284|   JSR BUFCLEAR
+x30CB | xF021 | 1111000000100001|                     |  285|   OUT
+x30CC | xA069 | 1010000001101001|                     |  286|   LDI R0, CH_NEWLN
+x30CD | xF021 | 1111000000100001|                     |  287|   OUT
+x30CE | x5020 | 0101000000100000|                     |  288|   AND R0, R0, #0
+x30CF | x305E | 0011000001011110|                     |  289|   ST R0, MODE
+      |       |                 |                     |  290| 
+      |       |                 |                     |  291| CHECK_COMMAND
+x30D0 | xF020 | 1111000000100000| CHECK_COMMAND       |  292|   GETC              ; Get char. into R0
+x30D1 | xF021 | 1111000000100001|                     |  293|   OUT               ; Output char. in R0
+      |       |                 |                     |  294| 
+x30D2 | x2265 | 0010001001100101|                     |  295|   LD R1, CH_Q
+x30D3 | x927F | 1001001001111111|                     |  296|   NOT R1, R1
+x30D4 | x1261 | 0001001001100001|                     |  297|   ADD R1, R1, #1
+x30D5 | x1201 | 0001001000000001|                     |  298|   ADD R1, R0, R1
+x30D6 | x0456 | 0000010001010110|                     |  299|   BRz QUIT
+      |       |                 |                     |  300| 
+x30D7 | x225A | 0010001001011010|                     |  301|   LD R1, CH_BSLASH
+x30D8 | x927F | 1001001001111111|                     |  302|   NOT R1, R1
+x30D9 | x1261 | 0001001001100001|                     |  303|   ADD R1, R1, #1
+x30DA | x1201 | 0001001000000001|                     |  304|   ADD R1, R0, R1
+x30DB | x055E | 0000010101011110|                     |  305|   BRz MONITOR_ENTER
+x30DC | x0FF3 | 0000111111110011|                     |  306|   BR CHECK_COMMAND
+      |       |                 |                     |  307| 
+      |       |                 |                     |  308| EXIT 
+      |       |                 |                     |  309|   ; CHECK_READ
+x30DD | x2050 | 0010000001010000| EXIT                |  310|   LD R0, MODE
+x30DE | x1220 | 0001001000100000|                     |  311|   ADD R1, R0, #0
+x30DF | x0A03 | 0000101000000011|                     |  312|   BRnp CHECK_READM
+x30E0 | x2055 | 0010000001010101|                     |  313|   LD R0, CH_NEWLN
+x30E1 | xF021 | 1111000000100001|                     |  314|   OUT
+x30E2 | x0E36 | 0000111000110110|                     |  315|   BR HDL_READ
+      |       |                 |                     |  316| 
+      |       |                 |                     |  317| CHECK_READM
+x30E3 | x2250 | 0010001001010000| CHECK_READM         |  318|   LD R1, CH_DOT
+x30E4 | x927F | 1001001001111111|                     |  319|   NOT R1, R1
+x30E5 | x5201 | 0101001000000001|                     |  320|   AND R1, R0, R1
+      |       |                 |                     |  321|   ; BRnp CHECK_RUN
+x30E6 | x0A03 | 0000101000000011|                     |  322|   BRnp CHECK_WRITE
+x30E7 | x204E | 0010000001001110|                     |  323|   LD R0, CH_NEWLN
+x30E8 | xF021 | 1111000000100001|                     |  324|   OUT
+x30E9 | x0E2D | 0000111000101101|                     |  325|   BR HDL_READM
+      |       |                 |                     |  326| 
+      |       |                 |                     |  327| ; CHECK_RUN
+      |       |                 |                     |  328| ;   LD R1, CH_R
+      |       |                 |                     |  329| ;   NOT R1, R1
+      |       |                 |                     |  330| ;   ADD R1, R1, #0
+      |       |                 |                     |  331| ;   BRnp CHECK_WRITE
+      |       |                 |                     |  332| ;   LD R0, CH_NEWLN
+      |       |                 |                     |  333| ;   OUT
+      |       |                 |                     |  334| ;   BR HDL_RUN
+      |       |                 |                     |  335| 
+      |       |                 |                     |  336| CHECK_WRITE
+x30EA | x204B | 0010000001001011| CHECK_WRITE         |  337|   LD R0, CH_NEWLN
+x30EB | xF021 | 1111000000100001|                     |  338|   OUT
+x30EC | x0E05 | 0000111000000101|                     |  339|   BR HDL_WRITE
+      |       |                 |                     |  340| 
+      |       |                 |                     |  341| SHIFT4 ; Shift four times what is located in R0
+      |       |                 |                     |  342|   ; It would take as much to make a loop
+      |       |                 |                     |  343|   ; so why bother?
+x30ED | x1000 | 0001000000000000| SHIFT4              |  344|   ADD R0, R0, R0 ; N = N + N => Left Shift
+x30EE | x1000 | 0001000000000000|                     |  345|   ADD R0, R0, R0 ; N = N + N => Left Shift
+x30EF | x1000 | 0001000000000000|                     |  346|   ADD R0, R0, R0 ; N = N + N => Left Shift
+x30F0 | x1000 | 0001000000000000|                     |  347|   ADD R0, R0, R0 ; N = N + N => Left Shift
+      |       |                 |                     |  348| 
+x30F1 | xC1C0 | 1100000111000000|                     |  349|   RET
+      |       |                 |                     |  350| 
+      |       |                 |                     |  351| HDL_WRITE ; Handle Write
+      |       |                 |                     |  352|   ; ADDR: DATA
+      |       |                 |                     |  353|   ; e.g 3159: AA00
+      |       |                 |                     |  354|   ; So read first 4 values in buffer for addr. to write to.
+      |       |                 |                     |  355|   ; Parse next 4 balues in buffer for value.
+      |       |                 |                     |  356|   ; so, eseentially move the pointer +4 positions.
+      |       |                 |                     |  357| 
+x30F2 | x2124 | 0010000100100100| HDL_WRITE           |  358|   LD R0, BUFPTR
+x30F3 | x103C | 0001000000111100|                     |  359|   ADD R0, R0, #-4
+x30F4 | x3122 | 0011000100100010|                     |  360|   ST R0, BUFPTR
+x30F5 | x4F38 | 0100111100111000|                     |  361|   JSR BUFPRINT
+x30F6 | x203C | 0010000000111100|                     |  362|   LD R0, CH_COLON
+x30F7 | xF021 | 1111000000100001|                     |  363|   OUT
+x30F8 | x203E | 0010000000111110|                     |  364|   LD R0, CH_SPACE
+x30F9 | xF021 | 1111000000100001|                     |  365|   OUT
+      |       |                 |                     |  366| 
+x30FA | xEC03 | 1110110000000011|                     |  367|   LEA R6, HDL_WRITE_L1
+x30FB | x4F10 | 0100111100010000|                     |  368|   JSR STKINC
+x30FC | xBD04 | 1011110100000100|                     |  369|   STI R6, STKPTR
+x30FD | x4FB0 | 0100111110110000|                     |  370|   JSR HEX2MEM ; Read four values in buffer
+      |       |                 |                     |  371| HDL_WRITE_L1
+      |       |                 |                     |  372| 
+x30FE | x4F0D | 0100111100001101| HDL_WRITE_L1        |  373|   JSR STKINC
+x30FF | xB101 | 1011000100000001|                     |  374|   STI R0, STKPTR ; store result in stack
+      |       |                 |                     |  375| 
+x3100 | x2116 | 0010000100010110|                     |  376|   LD R0, BUFPTR
+x3101 | x1024 | 0001000000100100|                     |  377|   ADD R0, R0, #4
+x3102 | x3114 | 0011000100010100|                     |  378|   ST R0, BUFPTR
+x3103 | x2112 | 0010000100010010|                     |  379|   LD R0, BUFSTRT
+x3104 | x1024 | 0001000000100100|                     |  380|   ADD R0, R0, #4
+x3105 | x3110 | 0011000100010000|                     |  381|   ST R0, BUFSTRT
+      |       |                 |                     |  382| 
+x3106 | xEC05 | 1110110000000101|                     |  383|   LEA R6, HDL_WRITE_L2
+x3107 | x4F04 | 0100111100000100|                     |  384|   JSR STKINC
+x3108 | x4F0B | 0100111100001011|                     |  385|   JSR GET_STKPTR
+x3109 | x6000 | 0110000000000000|                     |  386|   LDR R0, R0, #0
+x310A | x7C00 | 0111110000000000|                     |  387|   STR R6, R0, #0
+x310B | x4FA2 | 0100111110100010|                     |  388|   JSR HEX2MEM ; Read four values in buffer
+      |       |                 |                     |  389| 
+      |       |                 |                     |  390| HDL_WRITE_L2
+      |       |                 |                     |  391| 
+x310C | x1420 | 0001010000100000| HDL_WRITE_L2        |  392|   ADD R2, R0, #0 ; copy result in R2
+      |       |                 |                     |  393|   ; R0 is the new value
+      |       |                 |                     |  394|   ; R1 is the address
+x310D | x4F06 | 0100111100000110|                     |  395|   JSR GET_STKPTR
+x310E | x6200 | 0110001000000000|                     |  396|   LDR R1, R0, #0 ; Pop address off the stack
+x310F | x6240 | 0110001001000000|                     |  397|   LDR R1, R1, #0
+x3110 | x4EFF | 0100111011111111|                     |  398|   JSR STKDEC
+      |       |                 |                     |  399| 
+x3111 | x7440 | 0111010001000000|                     |  400|   STR R2, R1, #0
+x3112 | x4F1B | 0100111100011011|                     |  401|   JSR BUFPRINT
+x3113 | x2022 | 0010000000100010|                     |  402|   LD R0, CH_NEWLN
+x3114 | xF021 | 1111000000100001|                     |  403|   OUT
+      |       |                 |                     |  404| 
+x3115 | xE05D | 1110000001011101|                     |  405|   LEA R0, MSG_WRITE
+x3116 | x0E11 | 0000111000010001|                     |  406|   BR END_COMMAND
+      |       |                 |                     |  407| 
+      |       |                 |                     |  408| HDL_READM ; Handle MULTI READ
+      |       |                 |                     |  409|   ; Read the address of the first four and
+      |       |                 |                     |  410|   ; the address of the last four inputs
+      |       |                 |                     |  411|   ; substract first on last
+      |       |                 |                     |  412|   ; if result is neg. EXIT
+      |       |                 |                     |  413|   ; else loop
+      |       |                 |                     |  414|   ; increment address, convert, print
+      |       |                 |                     |  415|   ; get value, convert, print
+      |       |                 |                     |  416| 
+x3117 | xE03D | 1110000000111101| HDL_READM           |  417|   LEA R0, MSG_READM
+x3118 | x0E0F | 0000111000001111|                     |  418|   BR END_COMMAND
+      |       |                 |                     |  419| 
+      |       |                 |                     |  420| HDL_READ ; Handle Read
+x3119 | x4F14 | 0100111100010100| HDL_READ            |  421|   JSR BUFPRINT
+x311A | x2018 | 0010000000011000|                     |  422|   LD R0, CH_COLON
+x311B | xF021 | 1111000000100001|                     |  423|   OUT
+x311C | x201A | 0010000000011010|                     |  424|   LD R0, CH_SPACE
+x311D | xF021 | 1111000000100001|                     |  425|   OUT
+      |       |                 |                     |  426| 
+x311E | x4EED | 0100111011101101|                     |  427|   JSR STKINC
+x311F | x4EF4 | 0100111011110100|                     |  428|   JSR GET_STKPTR
+x3120 | x6000 | 0110000000000000|                     |  429|   LDR R0, R0, #0
+x3121 | xEE02 | 1110111000000010|                     |  430|   LEA R7, LAB
+x3122 | x7E00 | 0111111000000000|                     |  431|   STR R7, R0, #0
+x3123 | x4F8A | 0100111110001010|                     |  432|   JSR HEX2MEM    ; Buffer to mem. addr.
+      |       |                 |                     |  433| LAB
+x3124 | x6000 | 0110000000000000| LAB                 |  434|   LDR R0, R0, #0 ; Load value from add.r
+x3125 | x4F6C | 0100111101101100|                     |  435|   JSR MEM2HEX    ; Mem. value to Buffer
+x3126 | x4F07 | 0100111100000111|                     |  436|   JSR BUFPRINT   ; Print buffer content
+x3127 | xE015 | 1110000000010101|                     |  437|   LEA R0, MSG_READ
+      |       |                 |                     |  438| 
+      |       |                 |                     |  439| END_COMMAND
+x3128 | xF022 | 1111000000100010| END_COMMAND         |  440|   PUTS
+x3129 | x5020 | 0101000000100000|                     |  441|   AND R0, R0, #0
+x312A | x3003 | 0011000000000011|                     |  442|   ST R0, MODE
+x312B | x4EFD | 0100111011111101|                     |  443|   JSR BUFCLEAR
+x312C | x0F0C | 0000111100001100|                     |  444|   BR MAIN
+      |       |                 |                     |  445| 
+      |       |                 |                     |  446| QUIT
+x312D | xF025 | 1111000000100101| QUIT                |  447| HALT
+      |       |                 |                     |  448| 
+x312E | x0000 | 0000000000000000| MODE                |  449| MODE      .FILL x0000 ; READ on start
+x312F | x0041 | 0000000001000001| CH_A                |  450| CH_A      .FILL x0041
+x3130 | x0037 | 0000000000110111| CH_A_OFF            |  451| CH_A_OFF  .FILL x0037
+x3131 | x0008 | 0000000000001000| CH_BKSPC            |  452| CH_BKSPC  .FILL x0008
+x3132 | x005C | 0000000001011100| CH_BSLASH           |  453| CH_BSLASH .FILL x005C
+x3133 | x003A | 0000000000111010| CH_COLON            |  454| CH_COLON  .FILL x003A
+x3134 | x002E | 0000000000101110| CH_DOT              |  455| CH_DOT    .FILL x002E
+x3135 | x0046 | 0000000001000110| CH_F                |  456| CH_F      .FILL x0046
+x3136 | x000A | 0000000000001010| CH_NEWLN            |  457| CH_NEWLN  .FILL x000A
+x3137 | x0020 | 0000000000100000| CH_SPACE            |  458| CH_SPACE  .FILL x0020
+x3138 | x0051 | 0000000001010001| CH_Q                |  459| CH_Q      .FILL x0051
+x3139 | x0052 | 0000000001010010| CH_R                |  460| CH_R      .FILL x0052
+x313A | x0030 | 0000000000110000| CH_ZERO             |  461| CH_ZERO   .FILL x0030
+x313B | x8000 | 1000000000000000| MASK                |  462| MASK      .FILL x8000
+      |       |                 |                     |  463| 
+x313C | x0000 | 0000000000000000| TEMP                |  464| TEMP .FILL x0000
+      |       |                 |                     |  465| 
+x313D | x000A | 0000000000001010| MSG_READ            |  466| MSG_READ  .STRINGZ "\nYou were in READ MODE\n"
+x313E | x0059 | 0000000001011001|                     |     | 
+x313F | x006F | 0000000001101111|                     |     | 
+x3140 | x0075 | 0000000001110101|                     |     | 
+x3141 | x0020 | 0000000000100000|                     |     | 
+x3142 | x0077 | 0000000001110111|                     |     | 
+x3143 | x0065 | 0000000001100101|                     |     | 
+x3144 | x0072 | 0000000001110010|                     |     | 
+x3145 | x0065 | 0000000001100101|                     |     | 
+x3146 | x0020 | 0000000000100000|                     |     | 
+x3147 | x0069 | 0000000001101001|                     |     | 
+x3148 | x006E | 0000000001101110|                     |     | 
+x3149 | x0020 | 0000000000100000|                     |     | 
+x314A | x0052 | 0000000001010010|                     |     | 
+x314B | x0045 | 0000000001000101|                     |     | 
+x314C | x0041 | 0000000001000001|                     |     | 
+x314D | x0044 | 0000000001000100|                     |     | 
+x314E | x0020 | 0000000000100000|                     |     | 
+x314F | x004D | 0000000001001101|                     |     | 
+x3150 | x004F | 0000000001001111|                     |     | 
+x3151 | x0044 | 0000000001000100|                     |     | 
+x3152 | x0045 | 0000000001000101|                     |     | 
+x3153 | x000A | 0000000000001010|                     |     | 
+x3154 | x0000 | 0000000000000000|                     |     | 
+x3155 | x000A | 0000000000001010| MSG_READM           |  467| MSG_READM .STRINGZ "\nYou were in READ MULTI MODE\n"
+x3156 | x0059 | 0000000001011001|                     |     | 
+x3157 | x006F | 0000000001101111|                     |     | 
+x3158 | x0075 | 0000000001110101|                     |     | 
+x3159 | x0020 | 0000000000100000|                     |     | 
+x315A | x0077 | 0000000001110111|                     |     | 
+x315B | x0065 | 0000000001100101|                     |     | 
+x315C | x0072 | 0000000001110010|                     |     | 
+x315D | x0065 | 0000000001100101|                     |     | 
+x315E | x0020 | 0000000000100000|                     |     | 
+x315F | x0069 | 0000000001101001|                     |     | 
+x3160 | x006E | 0000000001101110|                     |     | 
+x3161 | x0020 | 0000000000100000|                     |     | 
+x3162 | x0052 | 0000000001010010|                     |     | 
+x3163 | x0045 | 0000000001000101|                     |     | 
+x3164 | x0041 | 0000000001000001|                     |     | 
+x3165 | x0044 | 0000000001000100|                     |     | 
+x3166 | x0020 | 0000000000100000|                     |     | 
+x3167 | x004D | 0000000001001101|                     |     | 
+x3168 | x0055 | 0000000001010101|                     |     | 
+x3169 | x004C | 0000000001001100|                     |     | 
+x316A | x0054 | 0000000001010100|                     |     | 
+x316B | x0049 | 0000000001001001|                     |     | 
+x316C | x0020 | 0000000000100000|                     |     | 
+x316D | x004D | 0000000001001101|                     |     | 
+x316E | x004F | 0000000001001111|                     |     | 
+x316F | x0044 | 0000000001000100|                     |     | 
+x3170 | x0045 | 0000000001000101|                     |     | 
+x3171 | x000A | 0000000000001010|                     |     | 
+x3172 | x0000 | 0000000000000000|                     |     | 
+x3173 | x000A | 0000000000001010| MSG_WRITE           |  468| MSG_WRITE .STRINGZ "\nYou were in WRITE MODE\n"
+x3174 | x0059 | 0000000001011001|                     |     | 
+x3175 | x006F | 0000000001101111|                     |     | 
+x3176 | x0075 | 0000000001110101|                     |     | 
+x3177 | x0020 | 0000000000100000|                     |     | 
+x3178 | x0077 | 0000000001110111|                     |     | 
+x3179 | x0065 | 0000000001100101|                     |     | 
+x317A | x0072 | 0000000001110010|                     |     | 
+x317B | x0065 | 0000000001100101|                     |     | 
+x317C | x0020 | 0000000000100000|                     |     | 
+x317D | x0069 | 0000000001101001|                     |     | 
+x317E | x006E | 0000000001101110|                     |     | 
+x317F | x0020 | 0000000000100000|                     |     | 
+x3180 | x0057 | 0000000001010111|                     |     | 
+x3181 | x0052 | 0000000001010010|                     |     | 
+x3182 | x0049 | 0000000001001001|                     |     | 
+x3183 | x0054 | 0000000001010100|                     |     | 
+x3184 | x0045 | 0000000001000101|                     |     | 
+x3185 | x0020 | 0000000000100000|                     |     | 
+x3186 | x004D | 0000000001001101|                     |     | 
+x3187 | x004F | 0000000001001111|                     |     | 
+x3188 | x0044 | 0000000001000100|                     |     | 
+x3189 | x0045 | 0000000001000101|                     |     | 
+x318A | x000A | 0000000000001010|                     |     | 
+x318B | x0000 | 0000000000000000|                     |     | 
+      |       |                 |                     |  469| .END
