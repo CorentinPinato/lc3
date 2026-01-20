@@ -8,7 +8,7 @@ from tests.conftest import run_pipeline
 
 class TestFullPipeline:
     """Tests for complete assembly pipeline."""
-    
+
     def test_simple_program(self):
         """Test assembly of a simple program."""
         lines = [
@@ -22,7 +22,7 @@ class TestFullPipeline:
         assert len(result.stmts) == 4
         assert result.stmts[0].line == 1
         assert result.stmts[1].line == 2
-    
+
     def test_program_with_label(self):
         """Test assembly of program with label."""
         lines = [
@@ -36,7 +36,7 @@ class TestFullPipeline:
         result = run_pipeline(lines)
         assert "LOOP" in result.symbols
         assert len(result.stmts) == 5
-    
+
     def test_program_with_string(self):
         """Test assembly of program with string directive."""
         lines = [
@@ -52,7 +52,7 @@ class TestFullPipeline:
         binary = result.stmts[1].resolve()
         assert isinstance(binary, list)
         assert len(binary) == 3
-    
+
     def test_program_with_blkw(self):
         """Test assembly of program with .BLKW directive."""
         lines = [
@@ -67,7 +67,7 @@ class TestFullPipeline:
         binary = result.stmts[1].resolve()
         assert isinstance(binary, list)
         assert len(binary) == 3
-    
+
     def test_binary_resolution(self):
         """Test that all statements can be resolved to binaries."""
         lines = [
@@ -90,13 +90,13 @@ class TestFullPipeline:
                 binaries.extend(binary)
             else:
                 binaries.append(binary)
-        
+
         assert len(binaries) > 0
         # All binaries should be 16 bits
         for b in binaries:
             assert len(b) == 16
             assert all(c in "01" for c in b)
-    
+
     def test_label_forward_reference(self):
         """Test forward reference to label."""
         lines = [
@@ -110,7 +110,7 @@ class TestFullPipeline:
         result = run_pipeline(lines)
         assert result.symbols["TARGET"] == {"address": int("0x3002", 16), "line": 4}
         assert len(result.stmts) == 5
-    
+
     def test_multiple_statements_resolution(self):
         """Test resolution of multiple statement types."""
         lines = [
@@ -131,7 +131,7 @@ class TestFullPipeline:
         result = run_pipeline(lines)
         # Should have 10 statements (excluding .ORIG, .END, and LABEL line)
         assert len(result.stmts) >= 9
-        
+
         # All should resolve without errors
         for stmt in result.stmts:
             binary = stmt.resolve()
@@ -145,7 +145,7 @@ class TestFullPipeline:
 
 class TestErrorCases:
     """Tests for error handling in the pipeline."""
-    
+
     def test_missing_origin(self):
         """Test that missing .ORIG is caught."""
         lines = [
@@ -160,7 +160,7 @@ class TestErrorCases:
         tokenized = _tokenizer.tokenize(lines)
         with pytest.raises(_pre_parsers.PreParsingError):
             _pre_parsers.get_origin(tokenized)
-    
+
     def test_missing_end(self):
         """Test that missing .END is caught."""
         lines = [
@@ -174,7 +174,7 @@ class TestErrorCases:
         tokenized = _tokenizer.tokenize(lines)
         with pytest.raises(_pre_parsers.PreParsingError):
             _pre_parsers.has_end(tokenized)
-    
+
     def test_duplicate_labels(self):
         """Test that duplicate labels are caught."""
         lines = [
@@ -192,7 +192,7 @@ class TestErrorCases:
         with pytest.raises(_pre_parsers.PreParsingError) as exc_info:
             _pre_parsers.symbols(tokenized, origin)
         assert "Duplicate" in str(exc_info.value)
-    
+
     def test_undefined_label_in_statement(self):
         """Test that undefined label usage is caught."""
         lines = [
@@ -207,13 +207,13 @@ class TestErrorCases:
         with pytest.raises(statements.StmtError) as exc_info:
             result.stmts[1].resolve()
         assert "Undefined Label" in str(exc_info.value)
-    
+
     def test_invalid_token(self):
         """Test that invalid tokens are caught during tokenization."""
         import tokenizer as _tokenizer
         with pytest.raises(_tokenizer.TokenizerError):
             _tokenizer.tokenize([".INVALID_TOKEN"])
-    
+
     def test_wrong_argument_count(self):
         """Test that wrong argument counts are caught."""
         lines = [
@@ -231,7 +231,7 @@ class TestErrorCases:
 
 class TestComplexPrograms:
     """Tests for more complex assembly programs."""
-    
+
     def test_program_with_comments(self):
         """Test program with comments."""
         lines = [
@@ -244,7 +244,7 @@ class TestComplexPrograms:
 
         result = run_pipeline(lines)
         assert len(result.stmts) == 4
-    
+
     def test_program_with_multiple_strings(self):
         """Test program with multiple string directives."""
         lines = [
@@ -268,7 +268,7 @@ class TestComplexPrograms:
         assert result.symbols["MSG1"] == {"address": int("0x3000", 16), "line": 2}
         assert result.symbols["MSG2"] == {"address": int("0x3006", 16), "line": 3}
         assert result.symbols["END_MSG2"] == {"address": int("0x300c", 16), "line": 4}
-    
+
     def test_program_with_label_only_lines(self):
         """Test program with label-only lines."""
         lines = [

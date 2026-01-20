@@ -52,7 +52,7 @@ def imm(value: int, bits: int) -> str:
 
 class TestArithmetic:
     """Tests for Arithmetic statement resolution."""
-    
+
     def test_add_with_registers(self):
         """Test ADD instruction with all registers."""
         toks = [
@@ -63,14 +63,14 @@ class TestArithmetic:
         ]
         stmt = statements.Arithmetic(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("ADD"))  # ADD opcode
         # DR, SR1, SR2
         assert result[4:7] == REGS["R1"]
         assert result[7:10] == REGS["R2"]
         assert result[13:16] == REGS["R3"]
-    
+
     def test_add_with_immediate(self):
         """Test ADD instruction with immediate value."""
         toks = [
@@ -81,7 +81,7 @@ class TestArithmetic:
         ]
         stmt = statements.Arithmetic(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("ADD"))  # ADD opcode
         # DR, SR1, imm flag and value
@@ -89,7 +89,7 @@ class TestArithmetic:
         assert result[7:10] == REGS["R2"]
         assert result[10] == "1"  # Immediate mode flag
         assert result[11:16] == imm(5, 5)
-    
+
     def test_add_wrong_argument_count(self):
         """Test ADD with wrong number of arguments raises error."""
         toks = [
@@ -98,7 +98,7 @@ class TestArithmetic:
             tokens.Register("R2", 1)
         ]
         stmt = statements.Arithmetic(toks, {})
-        
+
         with pytest.raises(Exception) as exc_info:
             stmt.resolve()
         assert "3 arguments" in str(exc_info.value)
@@ -116,19 +116,19 @@ class TestArithmetic:
         with pytest.raises(Exception) as exc_info:
             stmt.resolve()
         assert "either a Number or a Register" in str(exc_info.value)
-    
+
     def test_arithmetic_match(self):
         """Test Arithmetic.match class method."""
         toks = [tokens.Operation("ADD", 1)]
         assert statements.Arithmetic.match(toks) is True
-        
+
         toks = [tokens.Operation("NOT", 1)]
         assert statements.Arithmetic.match(toks) is False
 
 
 class TestDirective:
     """Tests for Directive statement resolution."""
-    
+
     def test_fill_directive(self):
         """Test .FILL directive resolution."""
         toks = [
@@ -137,10 +137,10 @@ class TestDirective:
         ]
         stmt = statements.Directive(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result == f"{42:016b}"
-    
+
     def test_stringz_directive(self):
         """Test .STRINGZ directive resolution."""
         toks = [
@@ -149,10 +149,10 @@ class TestDirective:
         ]
         stmt = statements.Directive(toks, {})
         result = stmt.resolve()
-        
+
         assert isinstance(result, list)
         assert len(result) == 3  # 'H', 'i', null
-    
+
     def test_blkw_directive(self):
         """Test .BLKW directive resolution."""
         toks = [
@@ -161,23 +161,23 @@ class TestDirective:
         ]
         stmt = statements.Directive(toks, {})
         result = stmt.resolve()
-        
+
         assert isinstance(result, list)
         assert len(result) == 3
-    
+
     def test_end_directive(self):
         """Test .END directive returns empty string."""
         toks = [tokens.Directive(".END", 1)]
         stmt = statements.Directive(toks, {})
         result = stmt.resolve()
-        
+
         assert result == ""
-    
+
     def test_directive_wrong_argument_count(self):
         """Test directive with wrong argument count raises error."""
         toks = [tokens.Directive(".FILL", 1)]
         stmt = statements.Directive(toks, {})
-        
+
         with pytest.raises(Exception) as exc_info:
             stmt.resolve()
         assert "one value" in str(exc_info.value)
@@ -197,7 +197,7 @@ class TestDirective:
 
 class TestBranch:
     """Tests for Branch statement resolution."""
-    
+
     def test_branch_with_label(self):
         """Test branch instruction with label."""
         toks = [
@@ -218,7 +218,7 @@ class TestBranch:
         assert result.startswith(opcode("BR"))
         assert result[4:7] == "111"  # nzp flags
         assert result[7:16] == imm(3, 9)  # x3004 - x3000 - 1 == 3
-    
+
     def test_branch_with_number(self):
         """Test branch instruction with numeric offset."""
         toks = [
@@ -227,12 +227,12 @@ class TestBranch:
         ]
         stmt = statements.Branch(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("BR"))
         assert result[4:7] == "111"  # nzp flags
         assert result[7:16] == imm(5, 9)
-    
+
     def test_branch_conditional_flags(self):
         """Test branch instruction with conditional flags."""
         toks = [
@@ -241,7 +241,7 @@ class TestBranch:
         ]
         stmt = statements.Branch(toks, {})
         result = stmt.resolve()
-        
+
         assert result[4] == "1"  # n flag
         assert result[5] == "0"  # z flag
         assert result[6] == "0"  # p flag
@@ -306,12 +306,12 @@ class TestBranch:
 
         assert result.startswith(opcode("BR"))
         assert result[4:7] == "011"
-    
+
     def test_branch_wrong_argument_count(self):
         """Test branch with wrong argument count raises error."""
         toks = [tokens.Operation("BR", 1)]
         stmt = statements.Branch(toks, {})
-        
+
         with pytest.raises(Exception) as exc_info:
             stmt.resolve()
         assert "1 argument" in str(exc_info.value)
@@ -331,7 +331,7 @@ class TestBranch:
 
 class TestJump:
     """Tests for Jump statement resolution."""
-    
+
     def test_jmp_with_register(self):
         """Test JMP instruction with register."""
         toks = [
@@ -340,19 +340,19 @@ class TestJump:
         ]
         stmt = statements.Jump(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("JMP"))
         # Base register (R7) in bits 7-9
         assert result[7:10] == REGS["R7"]
         assert result[4] == "0"  # Register mode
-    
+
     def test_ret_instruction(self):
         """Test RET instruction (no arguments)."""
         toks = [tokens.Operation("RET", 1)]
         stmt = statements.Jump(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result[4:7] == "000"
         assert result.startswith(opcode("RET"))
@@ -369,7 +369,7 @@ class TestJump:
         with pytest.raises(Exception) as exc_info:
             stmt.resolve()
         assert "takes no argument" in str(exc_info.value)
-    
+
     def test_jsr_with_label(self):
         """Test JSR instruction with label."""
         toks = [
@@ -378,7 +378,8 @@ class TestJump:
         ]
         symbols_table = {"SUBROUTINE": {"address": 0x3050, "line": 10}}
         stmt = statements.Jump(toks, symbols_table)
-        result = resolve_at(stmt)
+        stmt.addr = 0x3000
+        result = stmt.resolve()
 
         assert len(result) == 16
         assert result.startswith(opcode("JSR"))
@@ -396,7 +397,7 @@ class TestJump:
 
 class TestLoad:
     """Tests for Load statement resolution."""
-    
+
     def test_ld_instruction(self):
         """Test LD instruction."""
         toks = [
@@ -408,13 +409,13 @@ class TestLoad:
         stmt = statements.Load(toks, symbols_table)
         stmt.addr = 0x3000
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("LD"))
         assert result[4:7] == "000"
         assert int(result[10:], 2) == 0x3005 - 0x3000 - 1
         assert result[7:10] == REGS["R0"]
-    
+
     def test_ldr_instruction(self):
         """Test LDR instruction."""
         toks = [
@@ -425,14 +426,14 @@ class TestLoad:
         ]
         stmt = statements.Load(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("LDR"))  # LDR opcode
         # DR and base register
         assert result[4:7] == REGS["R1"]
         assert result[7:10] == REGS["R2"]
         assert result[10:16] == imm(5, 6)
-    
+
     def test_lea_instruction(self):
         """Test LEA instruction."""
         toks = [
@@ -444,7 +445,7 @@ class TestLoad:
         stmt = statements.Load(toks, symbols_table)
         stmt.addr = 0x3000
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("LEA"))
         assert result[4:7] == "000"
@@ -478,7 +479,7 @@ class TestLoad:
 
 class TestLogical:
     """Tests for Logical statement resolution."""
-    
+
     def test_not_instruction(self):
         """Test NOT instruction."""
         toks = [
@@ -488,13 +489,13 @@ class TestLogical:
         ]
         stmt = statements.Logical(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("NOT"))  # NOT opcode
         assert result[7:10] == REGS["R2"]
         assert result[4:7] == REGS["R1"]
         assert result.endswith("111111")
-    
+
     def test_and_with_register(self):
         """Test AND instruction with register."""
         toks = [
@@ -505,7 +506,7 @@ class TestLogical:
         ]
         stmt = statements.Logical(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("AND"))  # AND opcode
         # DR, SR1, SR2 (register mode)
@@ -513,7 +514,7 @@ class TestLogical:
         assert result[7:10] == REGS["R2"]
         assert result[10:13] == "000"  # Register mode
         assert result[13:16] == REGS["R3"]
-    
+
     def test_and_with_immediate(self):
         """Test AND instruction with immediate."""
         toks = [
@@ -524,7 +525,7 @@ class TestLogical:
         ]
         stmt = statements.Logical(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("AND"))
         # DR, SR1, imm flag and value
@@ -561,7 +562,7 @@ class TestLogical:
 
 class TestStore:
     """Tests for Store statement resolution."""
-    
+
     def test_st_instruction(self):
         """Test ST instruction."""
         toks = [
@@ -573,13 +574,13 @@ class TestStore:
         stmt = statements.Store(toks, symbols_table)
         stmt.addr = 0x3000
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("ST"))
         # SR, offset
         assert result[4:7] == REGS["R0"]
         assert int(result[7:], 2) == 0x3005 - 0x3000 - 1
-    
+
     def test_str_instruction(self):
         """Test STR instruction."""
         toks = [
@@ -590,7 +591,7 @@ class TestStore:
         ]
         stmt = statements.Store(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("STR"))  # STR opcode
         # SR and base register
@@ -626,40 +627,40 @@ class TestStore:
 
 class TestTrap:
     """Tests for Trap statement resolution."""
-    
+
     def test_getc_instruction(self):
         """Test GETC trap instruction."""
         toks = [tokens.Operation("GETC", 1)]
         stmt = statements.Trap(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("GETC"))  # TRAP opcode
         assert result[4:8] == "0000"
         assert result.endswith(f"{0x20+0:08b}")
-    
+
     def test_puts_instruction(self):
         """Test PUTS trap instruction."""
         toks = [tokens.Operation("PUTS", 1)]
         stmt = statements.Trap(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("PUTS"))
         assert result[4:8] == "0000"
         assert result.endswith(f"{0x20+2:08b}")
-    
+
     def test_halt_instruction(self):
         """Test HALT trap instruction."""
         toks = [tokens.Operation("HALT", 1)]
         stmt = statements.Trap(toks, {})
         result = stmt.resolve()
-        
+
         assert len(result) == 16
         assert result.startswith(opcode("HALT"))
         assert result[4:8] == "0000"
         assert result.endswith(f"{0x20+5:08b}")
-    
+
     def test_trap_with_argument_raises_error(self):
         """Test trap instruction with argument raises error."""
         toks = [
@@ -667,7 +668,7 @@ class TestTrap:
             tokens.Register("R0", 1)
         ]
         stmt = statements.Trap(toks, {})
-        
+
         with pytest.raises(Exception) as exc_info:
             stmt.resolve()
         assert "does not take arguments" in str(exc_info.value)
@@ -675,33 +676,33 @@ class TestTrap:
 
 class TestStatementBase:
     """Tests for base Statement class."""
-    
+
     def test_label_addr_undefined_label(self):
         """Test that undefined label raises StmtError."""
         toks = [tokens.Operation("LD", 1)]
         stmt = statements.Statement(toks, {})
         stmt.addr = 0x3000
-        
+
         with pytest.raises(statements.StmtError) as exc_info:
             stmt.label_addr("UNDEFINED")
         assert "Undefined Label" in str(exc_info.value)
-    
+
     def test_label_addr_defined_label(self):
         """Test label address calculation."""
         toks = [tokens.Operation("LD", 1)]
         symbols_table = {"LABEL": {"address": 0x3005, "line": 5}}
         stmt = statements.Statement(toks, symbols_table)
         stmt.addr = 0x3000
-        
+
         result = stmt.label_addr("LABEL")
         # Offset should be 0x3005 - 0x3000 - 1 = 4
         assert result == "#4"
-    
+
     def test_to_hex(self):
         """Test to_hex conversion."""
         toks = [tokens.Operation("ADD", 1)]
         stmt = statements.Statement(toks, {})
-        
+
         hex_val = stmt.to_hex()
         assert hex_val.startswith("0x")
 
