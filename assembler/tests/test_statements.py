@@ -1,5 +1,4 @@
 """Unit tests for statement classes and resolution."""
-from re import A
 import pytest
 import statements
 import tokens

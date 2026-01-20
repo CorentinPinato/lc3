@@ -18,10 +18,10 @@ class TestFullPipeline:
             ".END"
         ]
 
-        r = run_pipeline(lines)
-        assert len(r.stmts) == 4
-        assert r.stmts[0].line == 1
-        assert r.stmts[1].line == 2
+        result = run_pipeline(lines)
+        assert len(result.stmts) == 4
+        assert result.stmts[0].line == 1
+        assert result.stmts[1].line == 2
     
     def test_program_with_label(self):
         """Test assembly of program with label."""
@@ -33,9 +33,9 @@ class TestFullPipeline:
             ".END"
         ]
 
-        r = run_pipeline(lines)
-        assert "LOOP" in r.symbols
-        assert len(r.stmts) == 5
+        result = run_pipeline(lines)
+        assert "LOOP" in result.symbols
+        assert len(result.stmts) == 5
     
     def test_program_with_string(self):
         """Test assembly of program with string directive."""
@@ -46,12 +46,12 @@ class TestFullPipeline:
             ".END"
         ]
 
-        r = run_pipeline(lines)
-        assert "HELLO" in r.symbols
+        result = run_pipeline(lines)
+        assert "HELLO" in result.symbols
         # String should produce multiple binary words
-        result = r.stmts[1].resolve()
-        assert isinstance(result, list)
-        assert len(result) == 3
+        binary = result.stmts[1].resolve()
+        assert isinstance(binary, list)
+        assert len(binary) == 3
     
     def test_program_with_blkw(self):
         """Test assembly of program with .BLKW directive."""
@@ -62,11 +62,11 @@ class TestFullPipeline:
             ".END"
         ]
 
-        r = run_pipeline(lines)
-        assert "ARRAY" in r.symbols
-        result = r.stmts[1].resolve()
-        assert isinstance(result, list)
-        assert len(result) == 3
+        result = run_pipeline(lines)
+        assert "ARRAY" in result.symbols
+        binary = result.stmts[1].resolve()
+        assert isinstance(binary, list)
+        assert len(binary) == 3
     
     def test_binary_resolution(self):
         """Test that all statements can be resolved to binaries."""
@@ -80,16 +80,16 @@ class TestFullPipeline:
             ".END"
         ]
 
-        r = run_pipeline(lines)
+        result = run_pipeline(lines)
         binaries = []
-        for stmt in r.stmts:
-            result = stmt.resolve()
-            if result == "":
+        for stmt in result.stmts:
+            binary = stmt.resolve()
+            if binary == "":
                 continue
-            if isinstance(result, list):
-                binaries.extend(result)
+            if isinstance(binary, list):
+                binaries.extend(binary)
             else:
-                binaries.append(result)
+                binaries.append(binary)
         
         assert len(binaries) > 0
         # All binaries should be 16 bits
@@ -107,9 +107,9 @@ class TestFullPipeline:
             ".END"
         ]
 
-        r = run_pipeline(lines)
-        assert r.symbols["TARGET"] == {"address": int("0x3002", 16), "line": 4}
-        assert len(r.stmts) == 5
+        result = run_pipeline(lines)
+        assert result.symbols["TARGET"] == {"address": int("0x3002", 16), "line": 4}
+        assert len(result.stmts) == 5
     
     def test_multiple_statements_resolution(self):
         """Test resolution of multiple statement types."""
@@ -128,19 +128,19 @@ class TestFullPipeline:
             ".END"
         ]
 
-        r = run_pipeline(lines)
+        result = run_pipeline(lines)
         # Should have 10 statements (excluding .ORIG, .END, and LABEL line)
-        assert len(r.stmts) >= 9
+        assert len(result.stmts) >= 9
         
         # All should resolve without errors
-        for stmt in r.stmts:
-            result = stmt.resolve()
-            if result != "":
-                if isinstance(result, list):
-                    for b in result:
+        for stmt in result.stmts:
+            binary = stmt.resolve()
+            if binary != "":
+                if isinstance(binary, list):
+                    for b in binary:
                         assert len(b) == 16
                 else:
-                    assert len(result) == 16
+                    assert len(binary) == 16
 
 
 class TestErrorCases:
@@ -202,10 +202,10 @@ class TestErrorCases:
             ".END"
         ]
 
-        r = run_pipeline(lines)
+        result = run_pipeline(lines)
         # Should raise error when resolving
         with pytest.raises(statements.StmtError) as exc_info:
-            r.stmts[1].resolve()
+            result.stmts[1].resolve()
         assert "Undefined Label" in str(exc_info.value)
     
     def test_invalid_token(self):
@@ -223,9 +223,9 @@ class TestErrorCases:
             ".END"
         ]
 
-        r = run_pipeline(lines)
+        result = run_pipeline(lines)
         with pytest.raises(Exception) as exc_info:
-            r.stmts[1].resolve()
+            result.stmts[1].resolve()
         assert "arguments" in str(exc_info.value)
 
 
@@ -242,8 +242,8 @@ class TestComplexPrograms:
             ".END"
         ]
 
-        r = run_pipeline(lines)
-        assert len(r.stmts) == 4
+        result = run_pipeline(lines)
+        assert len(result.stmts) == 4
     
     def test_program_with_multiple_strings(self):
         """Test program with multiple string directives."""
@@ -256,7 +256,7 @@ class TestComplexPrograms:
             ".END"
         ]
 
-        r = run_pipeline(lines)
+        result = run_pipeline(lines)
         # String "Hello" has 5 chars + null = 6 words
         # 3000 H
         # 3001 e
@@ -264,10 +264,10 @@ class TestComplexPrograms:
         # 3003 l
         # 3004 o
         # 3005 null
-        assert len(r.stmts) == 5
-        assert r.symbols["MSG1"] == {"address": int("0x3000", 16), "line": 2}
-        assert r.symbols["MSG2"] == {"address": int("0x3006", 16), "line": 3}
-        assert r.symbols["END_MSG2"] == {"address": int("0x300c", 16), "line": 4}
+        assert len(result.stmts) == 5
+        assert result.symbols["MSG1"] == {"address": int("0x3000", 16), "line": 2}
+        assert result.symbols["MSG2"] == {"address": int("0x3006", 16), "line": 3}
+        assert result.symbols["END_MSG2"] == {"address": int("0x300c", 16), "line": 4}
     
     def test_program_with_label_only_lines(self):
         """Test program with label-only lines."""
@@ -281,6 +281,6 @@ class TestComplexPrograms:
             ".END"
         ]
 
-        r = run_pipeline(lines)
-        assert "START" in r.symbols
-        assert "LOOP" in r.symbols
+        result = run_pipeline(lines)
+        assert "START" in result.symbols
+        assert "LOOP" in result.symbols

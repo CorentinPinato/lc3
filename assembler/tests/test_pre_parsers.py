@@ -73,11 +73,11 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        r = run_pipeline(lines)
-        symbols_table = r.symbols
+        result = run_pipeline(lines)
+        symbols_table = result.symbols
         
         assert "LABEL" in symbols_table
-        assert symbols_table["LABEL"]["address"] == r.origin  # After .ORIG
+        assert symbols_table["LABEL"]["address"] == result.origin  # After .ORIG
         assert symbols_table["LABEL"]["line"] == 2
     
     def test_label_only_line(self):
@@ -89,12 +89,12 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        r = run_pipeline(lines)
-        symbols_table = r.symbols
+        result = run_pipeline(lines)
+        symbols_table = result.symbols
         
         assert "LABEL" in symbols_table
         # Label-only line should not increment address
-        assert symbols_table["LABEL"]["address"] == r.origin  # After .ORIG
+        assert symbols_table["LABEL"]["address"] == result.origin  # After .ORIG
     
     def test_multiple_labels(self):
         """Test symbol table with multiple labels."""
@@ -105,13 +105,13 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        r = run_pipeline(lines)
-        symbols_table = r.symbols
+        result = run_pipeline(lines)
+        symbols_table = result.symbols
         
         assert "LABEL1" in symbols_table
         assert "LABEL2" in symbols_table
-        assert symbols_table["LABEL1"]["address"] == r.origin  # After .ORIG
-        assert symbols_table["LABEL2"]["address"] == r.origin + 1
+        assert symbols_table["LABEL1"]["address"] == result.origin  # After .ORIG
+        assert symbols_table["LABEL2"]["address"] == result.origin + 1
     
     def test_duplicate_label_raises_error(self):
         """Test that duplicate labels raise PreParsingError."""
@@ -139,14 +139,14 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        r = run_pipeline(lines)
-        symbols_table = r.symbols
+        result = run_pipeline(lines)
+        symbols_table = result.symbols
         
         assert "HELLO" in symbols_table
         # String "Hi" is 2 chars + null = 3 words
         # Second label is located just after the 3 words string.
-        assert symbols_table["HELLO"]["address"] == r.origin  # After .ORIG
-        assert symbols_table["HELLO_END"]["address"] == r.origin + 3
+        assert symbols_table["HELLO"]["address"] == result.origin  # After .ORIG
+        assert symbols_table["HELLO_END"]["address"] == result.origin + 3
     
     def test_blkw_directive_address_calculation(self):
         """Test address calculation with .BLKW directive."""
@@ -157,14 +157,14 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        r = run_pipeline(lines)
-        symbols_table = r.symbols
+        result = run_pipeline(lines)
+        symbols_table = result.symbols
         
         assert "ARRAY" in symbols_table
         # .BLKW #3 allocates 3 words, so next address should be origin + 3
         # Second label is located just after the 3 words.
-        assert symbols_table["ARRAY"]["address"] == r.origin  # After .ORIG
-        assert symbols_table["ARRAY_END"]["address"] == r.origin + 3
+        assert symbols_table["ARRAY"]["address"] == result.origin  # After .ORIG
+        assert symbols_table["ARRAY_END"]["address"] == result.origin + 3
     
     def test_address_assignment_to_tokens(self):
         """Test that addresses are assigned to tokens."""
@@ -174,10 +174,10 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        r = run_pipeline(lines)
+        result = run_pipeline(lines)
         
         # Check that tokens have addresses assigned
-        assert r.tokenized[1][0].addr == r.origin  # After .ORIG
+        assert result.tokenized[1][0].addr == result.origin  # After .ORIG
 
 
 class TestRemoveSymbols:
