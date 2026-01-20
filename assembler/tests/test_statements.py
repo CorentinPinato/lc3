@@ -102,6 +102,20 @@ class TestArithmetic:
         with pytest.raises(Exception) as exc_info:
             stmt.resolve()
         assert "3 arguments" in str(exc_info.value)
+
+    def test_add_invalid_last_argument_type(self):
+        """Test ADD with invalid last argument type raises error."""
+        toks = [
+            tokens.Operation("ADD", 1),
+            tokens.Register("R1", 1),
+            tokens.Register("R2", 1),
+            tokens.String('"X"', 1),
+        ]
+        stmt = statements.Arithmetic(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "either a Number or a Register" in str(exc_info.value)
     
     def test_arithmetic_match(self):
         """Test Arithmetic.match class method."""
@@ -167,6 +181,18 @@ class TestDirective:
         with pytest.raises(Exception) as exc_info:
             stmt.resolve()
         assert "one value" in str(exc_info.value)
+
+    def test_directive_invalid_argument_type(self):
+        """Test directive with non-literal argument raises error."""
+        toks = [
+            tokens.Directive(".FILL", 1),
+            tokens.Label("LBL", 1),
+        ]
+        stmt = statements.Directive(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "only takes a `Literal` argument" in str(exc_info.value)
 
 
 class TestBranch:
@@ -290,6 +316,18 @@ class TestBranch:
             stmt.resolve()
         assert "1 argument" in str(exc_info.value)
 
+    def test_branch_invalid_argument_type(self):
+        """Test branch with invalid argument type raises error."""
+        toks = [
+            tokens.Operation("BR", 1),
+            tokens.Register("R1", 1),
+        ]
+        stmt = statements.Branch(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "only takes a `Label` or `Number` argument" in str(exc_info.value)
+
 
 class TestJump:
     """Tests for Jump statement resolution."""
@@ -319,6 +357,18 @@ class TestJump:
         assert result[4:7] == "000"
         assert result.startswith(opcode("RET"))
         assert result[7:10] == REGS["R7"]
+
+    def test_ret_with_argument_raises_error(self):
+        """Test RET with an argument raises error."""
+        toks = [
+            tokens.Operation("RET", 1),
+            tokens.Register("R0", 1),
+        ]
+        stmt = statements.Jump(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "takes no argument" in str(exc_info.value)
     
     def test_jsr_with_label(self):
         """Test JSR instruction with label."""
@@ -328,13 +378,21 @@ class TestJump:
         ]
         symbols_table = {"SUBROUTINE": {"address": 0x3050, "line": 10}}
         stmt = statements.Jump(toks, symbols_table)
-        stmt.addr = 0x3000
-        result = stmt.resolve()
+        result = resolve_at(stmt)
 
         assert len(result) == 16
         assert result.startswith(opcode("JSR"))
         assert result[4] == "1"  # PCoffset mode
         assert int(result[5:], 2) == 0x3050 - 0x3000 - 1
+
+    def test_jmp_missing_argument_raises_error(self):
+        """Test non-RET jump without operand raises error."""
+        toks = [tokens.Operation("JMP", 1)]
+        stmt = statements.Jump(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "takes 1 argument" in str(exc_info.value)
 
 class TestLoad:
     """Tests for Load statement resolution."""
@@ -393,6 +451,31 @@ class TestLoad:
         assert result[7:10] == REGS["R0"]
         assert int(result[7:16], 2) == 0x3005 - 0x3000 - 1
 
+    def test_ldr_wrong_argument_count_raises_error(self):
+        """Test LDR with wrong number of arguments raises error."""
+        toks = [
+            tokens.Operation("LDR", 1),
+            tokens.Register("R1", 1),
+            tokens.Register("R2", 1),
+        ]  # Missing offset
+        stmt = statements.Load(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "takes 3 arguments" in str(exc_info.value)
+
+    def test_load_wrong_argument_count_raises_error(self):
+        """Test non-LDR load with wrong number of arguments raises error."""
+        toks = [
+            tokens.Operation("LD", 1),
+            tokens.Register("R0", 1),
+        ]  # Missing label/offset
+        stmt = statements.Load(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "takes 2 arguments" in str(exc_info.value)
+
 class TestLogical:
     """Tests for Logical statement resolution."""
     
@@ -450,6 +533,31 @@ class TestLogical:
         assert result[10] == "1"  # Immediate mode
         assert result[11:16] == imm(5, 5)
 
+    def test_not_wrong_argument_count_raises_error(self):
+        """Test NOT with wrong number of arguments raises error."""
+        toks = [
+            tokens.Operation("NOT", 1),
+            tokens.Register("R1", 1),
+        ]  # Missing SR
+        stmt = statements.Logical(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "takes 2 arguments" in str(exc_info.value)
+
+    def test_and_wrong_argument_count_raises_error(self):
+        """Test AND with wrong number of arguments raises error."""
+        toks = [
+            tokens.Operation("AND", 1),
+            tokens.Register("R1", 1),
+            tokens.Register("R2", 1),
+        ]  # Missing third operand
+        stmt = statements.Logical(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "takes 3 arguments" in str(exc_info.value)
+
 
 class TestStore:
     """Tests for Store statement resolution."""
@@ -489,6 +597,31 @@ class TestStore:
         assert result[4:7] == REGS["R1"]
         assert result[7:10] == REGS["R2"]
         assert result[10:16] == imm(5, 6)
+
+    def test_str_wrong_argument_count_raises_error(self):
+        """Test STR with wrong number of arguments raises error."""
+        toks = [
+            tokens.Operation("STR", 1),
+            tokens.Register("R1", 1),
+            tokens.Register("R2", 1),
+        ]  # Missing offset
+        stmt = statements.Store(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "takes 3 arguments" in str(exc_info.value)
+
+    def test_st_wrong_argument_count_raises_error(self):
+        """Test ST with wrong number of arguments raises error."""
+        toks = [
+            tokens.Operation("ST", 1),
+            tokens.Register("R0", 1),
+        ]  # Missing label
+        stmt = statements.Store(toks, {})
+
+        with pytest.raises(Exception) as exc_info:
+            stmt.resolve()
+        assert "takes 2 arguments" in str(exc_info.value)
 
 
 class TestTrap:
@@ -571,3 +704,12 @@ class TestStatementBase:
         
         hex_val = stmt.to_hex()
         assert hex_val.startswith("0x")
+
+    def test_statement_repr_includes_class_name(self):
+        """Test __repr__ implementation for Statement."""
+        toks = [tokens.Operation("ADD", 1)]
+        stmt = statements.Statement(toks, {})
+
+        rep = repr(stmt)
+        assert "Stmt.Statement" in rep
+        assert "ADD" in rep
