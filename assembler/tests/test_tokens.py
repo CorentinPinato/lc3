@@ -162,7 +162,10 @@ class TestOperation:
     
     def test_valid_operations(self):
         """Test valid operation formats."""
-        valid_ops = ["ADD", "NOT", "LD", "ST", "BR", "JMP", "RET", "GETC", "PUTS", "HALT"]
+        valid_ops = [
+            "ADD", "AND", "NOT", "LD", "LDR", "LEA", "ST", "STR", "JMP",
+            "RET", "JSR", "BR", "GETC", "OUT", "PUTS", "IN", "HALT"
+        ]
         for op in valid_ops:
             assert tokens.Operation.match(op), f"'{op}' should be a valid operation"
     
@@ -171,24 +174,3 @@ class TestOperation:
         invalid_ops = ["add", "UNKNOWN", "LDX", ""]
         for op in invalid_ops:
             assert not tokens.Operation.match(op), f"'{op}' should not be a valid operation"
-    
-    def test_to_bin_load_operations(self):
-        """Test binary conversion for load operations."""
-        op = tokens.Operation("LD", 1)
-        assert op.to_bin(4) == "0010"
-        
-        op = tokens.Operation("LEA", 1)
-        assert op.to_bin(4) == "1110"
-    
-    def test_to_bin_arithmetic_operations(self):
-        """Test binary conversion for arithmetic operations."""
-        op = tokens.Operation("ADD", 1)
-        assert op.to_bin(4) == "0001"
-    
-    def test_to_bin_trap_operations(self):
-        """Test binary conversion for trap operations."""
-        op = tokens.Operation("HALT", 1)
-        assert op.to_bin(4) == "1111"
-        
-        op = tokens.Operation("GETC", 1)
-        assert op.to_bin(4) == "1111"

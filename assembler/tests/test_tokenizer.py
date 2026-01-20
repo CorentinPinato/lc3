@@ -41,10 +41,9 @@ class TestTokenizer:
     
     def test_comment_handling(self):
         """Test that comments are properly ignored."""
-        result = tokenizer.tokenize(["ADD R1 R2 R3 ; This is a comment"])
+        result = tokenizer.tokenize(["; comment only", "ADD R1 R2 R3 ; This is a comment"])
         assert len(result) == 1
         assert len(result[0]) == 4
-        # Comment should be stripped
     
     def test_empty_line(self):
         """Test that empty lines are filtered out."""
