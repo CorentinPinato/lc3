@@ -7,8 +7,9 @@ class PreParsingError(Exception):
 
 def get_origin(tokenized_lines):
     first_line = tokenized_lines[0]
-    directive, number = first_line
-    if isinstance(directive, tokens.Directive) and directive.lexeme == ".ORIG":
+    directive = first_line[0]
+    if isinstance(directive, tokens.Directive) and directive.lexeme == ".ORIG" and len(first_line) == 2:
+        number = first_line[1]
         if isinstance(number, tokens.Number):
             return number.to_int()
     raise PreParsingError("First line must be a '.ORIG' Directive followed by a Number literal.")
