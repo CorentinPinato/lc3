@@ -2,10 +2,8 @@
 import pytest
 import tempfile
 import os
-import tokenizer
-import pre_parsers
-import parser
 import statements
+from tests.conftest import run_pipeline
 
 
 class TestFullPipeline:
@@ -19,17 +17,11 @@ class TestFullPipeline:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        pre_parsers.has_end(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
-        assert len(stmts) == 4
-        assert stmts[0].line == 1
-        assert stmts[1].line == 2
+
+        r = run_pipeline(lines)
+        assert len(r.stmts) == 4
+        assert r.stmts[0].line == 1
+        assert r.stmts[1].line == 2
     
     def test_program_with_label(self):
         """Test assembly of program with label."""
@@ -40,15 +32,10 @@ class TestFullPipeline:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
-        assert "LOOP" in symbols
-        assert len(stmts) == 5
+
+        r = run_pipeline(lines)
+        assert "LOOP" in r.symbols
+        assert len(r.stmts) == 5
     
     def test_program_with_string(self):
         """Test assembly of program with string directive."""
@@ -58,16 +45,11 @@ class TestFullPipeline:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
-        assert "HELLO" in symbols
+
+        r = run_pipeline(lines)
+        assert "HELLO" in r.symbols
         # String should produce multiple binary words
-        result = stmts[1].resolve()
+        result = r.stmts[1].resolve()
         assert isinstance(result, list)
         assert len(result) == 3
     
@@ -79,15 +61,10 @@ class TestFullPipeline:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
-        assert "ARRAY" in symbols
-        result = stmts[1].resolve()
+
+        r = run_pipeline(lines)
+        assert "ARRAY" in r.symbols
+        result = r.stmts[1].resolve()
         assert isinstance(result, list)
         assert len(result) == 3
     
@@ -102,15 +79,10 @@ class TestFullPipeline:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
+
+        r = run_pipeline(lines)
         binaries = []
-        for stmt in stmts:
+        for stmt in r.stmts:
             result = stmt.resolve()
             if result == "":
                 continue
@@ -134,16 +106,10 @@ class TestFullPipeline:
             "TARGET HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
-        assert symbols["TARGET"] == { "address": int("0x3002", 16), "line": 4 }
-        print(int(stmts[1].resolve()[7:], 2)) == 1 # 1 + step = 2 from current place
-        assert len(stmts) == 5
+
+        r = run_pipeline(lines)
+        assert r.symbols["TARGET"] == {"address": int("0x3002", 16), "line": 4}
+        assert len(r.stmts) == 5
     
     def test_multiple_statements_resolution(self):
         """Test resolution of multiple statement types."""
@@ -161,18 +127,13 @@ class TestFullPipeline:
             "LABEL HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
+
+        r = run_pipeline(lines)
         # Should have 10 statements (excluding .ORIG, .END, and LABEL line)
-        assert len(stmts) >= 9
+        assert len(r.stmts) >= 9
         
         # All should resolve without errors
-        for stmt in stmts:
+        for stmt in r.stmts:
             result = stmt.resolve()
             if result != "":
                 if isinstance(result, list):
@@ -192,10 +153,13 @@ class TestErrorCases:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        with pytest.raises(pre_parsers.PreParsingError):
-            pre_parsers.get_origin(tokenized)
+
+        # run_pipeline intentionally requires .ORIG, so reuse underlying call path
+        import tokenizer as _tokenizer
+        import pre_parsers as _pre_parsers
+        tokenized = _tokenizer.tokenize(lines)
+        with pytest.raises(_pre_parsers.PreParsingError):
+            _pre_parsers.get_origin(tokenized)
     
     def test_missing_end(self):
         """Test that missing .END is caught."""
@@ -204,10 +168,12 @@ class TestErrorCases:
             "ADD R1 R2 R3",
             "HALT"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        with pytest.raises(pre_parsers.PreParsingError):
-            pre_parsers.has_end(tokenized)
+
+        import tokenizer as _tokenizer
+        import pre_parsers as _pre_parsers
+        tokenized = _tokenizer.tokenize(lines)
+        with pytest.raises(_pre_parsers.PreParsingError):
+            _pre_parsers.has_end(tokenized)
     
     def test_duplicate_labels(self):
         """Test that duplicate labels are caught."""
@@ -218,12 +184,13 @@ class TestErrorCases:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        
-        with pytest.raises(pre_parsers.PreParsingError) as exc_info:
-            pre_parsers.symbols(tokenized, origin)
+
+        import tokenizer as _tokenizer
+        import pre_parsers as _pre_parsers
+        tokenized = _tokenizer.tokenize(lines)
+        origin = _pre_parsers.get_origin(tokenized)
+        with pytest.raises(_pre_parsers.PreParsingError) as exc_info:
+            _pre_parsers.symbols(tokenized, origin)
         assert "Duplicate" in str(exc_info.value)
     
     def test_undefined_label_in_statement(self):
@@ -234,22 +201,18 @@ class TestErrorCases:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
+
+        r = run_pipeline(lines)
         # Should raise error when resolving
         with pytest.raises(statements.StmtError) as exc_info:
-            stmts[1].resolve()
+            r.stmts[1].resolve()
         assert "Undefined Label" in str(exc_info.value)
     
     def test_invalid_token(self):
         """Test that invalid tokens are caught during tokenization."""
-        with pytest.raises(tokenizer.TokenizerError):
-            tokenizer.tokenize([".INVALID_TOKEN"])
+        import tokenizer as _tokenizer
+        with pytest.raises(_tokenizer.TokenizerError):
+            _tokenizer.tokenize([".INVALID_TOKEN"])
     
     def test_wrong_argument_count(self):
         """Test that wrong argument counts are caught."""
@@ -259,15 +222,10 @@ class TestErrorCases:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
+
+        r = run_pipeline(lines)
         with pytest.raises(Exception) as exc_info:
-            stmts[1].resolve()
+            r.stmts[1].resolve()
         assert "arguments" in str(exc_info.value)
 
 
@@ -283,14 +241,9 @@ class TestComplexPrograms:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
-        assert len(stmts) == 4
+
+        r = run_pipeline(lines)
+        assert len(r.stmts) == 4
     
     def test_program_with_multiple_strings(self):
         """Test program with multiple string directives."""
@@ -302,13 +255,8 @@ class TestComplexPrograms:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
 
+        r = run_pipeline(lines)
         # String "Hello" has 5 chars + null = 6 words
         # 3000 H
         # 3001 e
@@ -316,10 +264,10 @@ class TestComplexPrograms:
         # 3003 l
         # 3004 o
         # 3005 null
-        assert len(stmts) == 5
-        assert symbols["MSG1"] == { "address": int("0x3000", 16), "line": 2 }
-        assert symbols["MSG2"] == { "address": int("0x3006", 16), "line": 3 }
-        assert symbols["END_MSG2"] == { "address": int("0x300c", 16), "line": 4 }
+        assert len(r.stmts) == 5
+        assert r.symbols["MSG1"] == {"address": int("0x3000", 16), "line": 2}
+        assert r.symbols["MSG2"] == {"address": int("0x3006", 16), "line": 3}
+        assert r.symbols["END_MSG2"] == {"address": int("0x300c", 16), "line": 4}
     
     def test_program_with_label_only_lines(self):
         """Test program with label-only lines."""
@@ -332,12 +280,7 @@ class TestComplexPrograms:
             "HALT",
             ".END"
         ]
-        
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols = pre_parsers.symbols(tokenized, origin)
-        unlabeled = pre_parsers.remove_symbols(tokenized)
-        stmts = parser.parse(unlabeled, symbols)
-        
-        assert "START" in symbols
-        assert "LOOP" in symbols
+
+        r = run_pipeline(lines)
+        assert "START" in r.symbols
+        assert "LOOP" in r.symbols

@@ -3,6 +3,7 @@ import pytest
 import pre_parsers
 import tokens
 import tokenizer
+from tests.conftest import run_pipeline
 
 
 class TestGetOrigin:
@@ -20,7 +21,7 @@ class TestGetOrigin:
         lines = [".ORIG #12288", "HALT", ".END"]
         tokenized = tokenizer.tokenize(lines)
         origin = pre_parsers.get_origin(tokenized)
-        assert origin == 12288
+        assert origin == 0x3000
     
     def test_missing_origin_raises_error(self):
         """Test that missing .ORIG raises PreParsingError."""
@@ -72,13 +73,11 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols_table = pre_parsers.symbols(tokenized, origin)
+        r = run_pipeline(lines)
+        symbols_table = r.symbols
         
         assert "LABEL" in symbols_table
-        print(f"ORIG -> {origin}")
-        assert symbols_table["LABEL"]["address"] == origin # After .ORIG
+        assert symbols_table["LABEL"]["address"] == r.origin  # After .ORIG
         assert symbols_table["LABEL"]["line"] == 2
     
     def test_label_only_line(self):
@@ -90,13 +89,12 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols_table = pre_parsers.symbols(tokenized, origin)
+        r = run_pipeline(lines)
+        symbols_table = r.symbols
         
         assert "LABEL" in symbols_table
         # Label-only line should not increment address
-        assert symbols_table["LABEL"]["address"] == origin # After .ORIG
+        assert symbols_table["LABEL"]["address"] == r.origin  # After .ORIG
     
     def test_multiple_labels(self):
         """Test symbol table with multiple labels."""
@@ -107,14 +105,13 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols_table = pre_parsers.symbols(tokenized, origin)
+        r = run_pipeline(lines)
+        symbols_table = r.symbols
         
         assert "LABEL1" in symbols_table
         assert "LABEL2" in symbols_table
-        assert symbols_table["LABEL1"]["address"] == origin # After .ORIG
-        assert symbols_table["LABEL2"]["address"] == origin + 1
+        assert symbols_table["LABEL1"]["address"] == r.origin  # After .ORIG
+        assert symbols_table["LABEL2"]["address"] == r.origin + 1
     
     def test_duplicate_label_raises_error(self):
         """Test that duplicate labels raise PreParsingError."""
@@ -142,15 +139,14 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols_table = pre_parsers.symbols(tokenized, origin)
+        r = run_pipeline(lines)
+        symbols_table = r.symbols
         
         assert "HELLO" in symbols_table
         # String "Hi" is 2 chars + null = 3 words
         # Second label is located just after the 3 words string.
-        assert symbols_table["HELLO"]["address"] == origin # After .ORIG
-        assert symbols_table["HELLO_END"]["address"] == origin + 3
+        assert symbols_table["HELLO"]["address"] == r.origin  # After .ORIG
+        assert symbols_table["HELLO_END"]["address"] == r.origin + 3
     
     def test_blkw_directive_address_calculation(self):
         """Test address calculation with .BLKW directive."""
@@ -161,15 +157,14 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        symbols_table = pre_parsers.symbols(tokenized, origin)
+        r = run_pipeline(lines)
+        symbols_table = r.symbols
         
         assert "ARRAY" in symbols_table
         # .BLKW #3 allocates 3 words, so next address should be origin + 3
         # Second label is located just after the 3 words.
-        assert symbols_table["ARRAY"]["address"] == origin # After .ORIG
-        assert symbols_table["ARRAY_END"]["address"] == origin + 3
+        assert symbols_table["ARRAY"]["address"] == r.origin  # After .ORIG
+        assert symbols_table["ARRAY_END"]["address"] == r.origin + 3
     
     def test_address_assignment_to_tokens(self):
         """Test that addresses are assigned to tokens."""
@@ -179,12 +174,10 @@ class TestSymbols:
             "HALT",
             ".END"
         ]
-        tokenized = tokenizer.tokenize(lines)
-        origin = pre_parsers.get_origin(tokenized)
-        pre_parsers.symbols(tokenized, origin)
+        r = run_pipeline(lines)
         
         # Check that tokens have addresses assigned
-        assert tokenized[1][0].addr == origin # After .ORIG
+        assert r.tokenized[1][0].addr == r.origin  # After .ORIG
 
 
 class TestRemoveSymbols:

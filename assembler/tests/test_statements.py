@@ -1,7 +1,54 @@
 """Unit tests for statement classes and resolution."""
+from re import A
 import pytest
 import statements
 import tokens
+
+
+# Independent opcode oracle for tests (do NOT derive from production code).
+OPCODES = {
+    "ADD": "0001",
+    "AND": "0101",
+    "NOT": "1001",
+    "LD": "0010",
+    "LDR": "0110",
+    "LEA": "1110",
+    "ST": "0011",
+    "STR": "0111",
+    "JMP": "1100",
+    "RET": "1100",
+    "JSR": "0100",
+    "BR": "0000",
+    "GETC": "1111",
+    "OUT": "1111",
+    "PUTS": "1111",
+    "IN": "1111",
+    "HALT": "1111",
+}
+
+
+def opcode(mnemonic: str) -> str:
+    """Return the expected 4-bit opcode for the given mnemonic (test-local source of truth)."""
+    return OPCODES[mnemonic]
+
+
+REGS = {
+    "R0": "000",
+    "R1": "001",
+    "R2": "010",
+    "R3": "011",
+    "R4": "100",
+    "R5": "101",
+    "R6": "110",
+    "R7": "111",
+}
+
+
+def imm(value: int, bits: int) -> str:
+    """Two's complement binary encoding for immediate fields (test-local oracle)."""
+    if value < 0:
+        value = (1 << bits) + value
+    return f"{value:0{bits}b}"
 
 
 class TestArithmetic:
@@ -15,12 +62,15 @@ class TestArithmetic:
             tokens.Register("R2", 1),
             tokens.Register("R3", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Arithmetic(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("0001")  # ADD opcode
+        assert result.startswith(opcode("ADD"))  # ADD opcode
+        # DR, SR1, SR2
+        assert result[4:7] == REGS["R1"]
+        assert result[7:10] == REGS["R2"]
+        assert result[13:16] == REGS["R3"]
     
     def test_add_with_immediate(self):
         """Test ADD instruction with immediate value."""
@@ -30,13 +80,16 @@ class TestArithmetic:
             tokens.Register("R2", 1),
             tokens.Number("#5", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Arithmetic(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("0001") # ADD opcode
+        assert result.startswith(opcode("ADD"))  # ADD opcode
+        # DR, SR1, imm flag and value
+        assert result[4:7] == REGS["R1"]
+        assert result[7:10] == REGS["R2"]
         assert result[10] == "1"  # Immediate mode flag
+        assert result[11:16] == imm(5, 5)
     
     def test_add_wrong_argument_count(self):
         """Test ADD with wrong number of arguments raises error."""
@@ -45,7 +98,6 @@ class TestArithmetic:
             tokens.Register("R1", 1),
             tokens.Register("R2", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Arithmetic(toks, {})
         
         with pytest.raises(Exception) as exc_info:
@@ -70,7 +122,6 @@ class TestDirective:
             tokens.Directive(".FILL", 1),
             tokens.Number("#42", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Directive(toks, {})
         result = stmt.resolve()
         
@@ -83,7 +134,6 @@ class TestDirective:
             tokens.Directive(".STRINGZ", 1),
             tokens.String('"Hi"', 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Directive(toks, {})
         result = stmt.resolve()
         
@@ -96,7 +146,6 @@ class TestDirective:
             tokens.Directive(".BLKW", 1),
             tokens.Number("#3", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Directive(toks, {})
         result = stmt.resolve()
         
@@ -106,7 +155,6 @@ class TestDirective:
     def test_end_directive(self):
         """Test .END directive returns empty string."""
         toks = [tokens.Directive(".END", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Directive(toks, {})
         result = stmt.resolve()
         
@@ -115,7 +163,6 @@ class TestDirective:
     def test_directive_wrong_argument_count(self):
         """Test directive with wrong argument count raises error."""
         toks = [tokens.Directive(".FILL", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Directive(toks, {})
         
         with pytest.raises(Exception) as exc_info:
@@ -132,7 +179,6 @@ class TestBranch:
             tokens.Operation("BR", 1),
             tokens.Label("LABEL", 1)
         ]
-        toks[0].addr = 0x3000
         # x3000 1 .ORIG ...
         # x3001 2 ...
         # x3002 3 ...
@@ -140,12 +186,13 @@ class TestBranch:
         # x3004 5 LABEL
         symbols_table = {"LABEL": {"address": 0x3004, "line": 5}}
         stmt = statements.Branch(toks, symbols_table)
-        
+        stmt.addr = 0x3000
         result = stmt.resolve()
 
         assert len(result) == 16
-        assert result.startswith("0000")
+        assert result.startswith(opcode("BR"))
         assert result[4:7] == "111"  # nzp flags
+        assert result[7:16] == imm(3, 9)  # x3004 - x3000 - 1 == 3
     
     def test_branch_with_number(self):
         """Test branch instruction with numeric offset."""
@@ -153,13 +200,13 @@ class TestBranch:
             tokens.Operation("BRnzp", 1),
             tokens.Number("#5", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Branch(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("0000")
+        assert result.startswith(opcode("BR"))
         assert result[4:7] == "111"  # nzp flags
+        assert result[7:16] == imm(5, 9)
     
     def test_branch_conditional_flags(self):
         """Test branch instruction with conditional flags."""
@@ -167,18 +214,77 @@ class TestBranch:
             tokens.Operation("BRn", 1),
             tokens.Number("#-2", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Branch(toks, {})
         result = stmt.resolve()
         
         assert result[4] == "1"  # n flag
         assert result[5] == "0"  # z flag
         assert result[6] == "0"  # p flag
+        assert result[7:16] == imm(-2, 9)
+
+    def test_branch_flag_z(self):
+        """Test BRz sets only the z flag."""
+        toks = [
+            tokens.Operation("BRz", 1),
+            tokens.Number("#0", 1),
+        ]
+        stmt = statements.Branch(toks, {})
+        result = stmt.resolve()
+
+        assert result.startswith(opcode("BR"))
+        assert result[4:7] == "010"
+
+    def test_branch_flag_p(self):
+        """Test BRp sets only the p flag."""
+        toks = [
+            tokens.Operation("BRp", 1),
+            tokens.Number("#0", 1),
+        ]
+        stmt = statements.Branch(toks, {})
+        result = stmt.resolve()
+
+        assert result.startswith(opcode("BR"))
+        assert result[4:7] == "001"
+
+    def test_branch_flag_np(self):
+        """Test BRnp sets n and p flags."""
+        toks = [
+            tokens.Operation("BRnp", 1),
+            tokens.Number("#0", 1),
+        ]
+        stmt = statements.Branch(toks, {})
+        result = stmt.resolve()
+
+        assert result.startswith(opcode("BR"))
+        assert result[4:7] == "101"
+
+    def test_branch_flag_nz(self):
+        """Test BRnz sets n and z flags."""
+        toks = [
+            tokens.Operation("BRnz", 1),
+            tokens.Number("#0", 1),
+        ]
+        stmt = statements.Branch(toks, {})
+        result = stmt.resolve()
+
+        assert result.startswith(opcode("BR"))
+        assert result[4:7] == "110"
+
+    def test_branch_flag_zp(self):
+        """Test BRzp sets z and p flags."""
+        toks = [
+            tokens.Operation("BRzp", 1),
+            tokens.Number("#0", 1),
+        ]
+        stmt = statements.Branch(toks, {})
+        result = stmt.resolve()
+
+        assert result.startswith(opcode("BR"))
+        assert result[4:7] == "011"
     
     def test_branch_wrong_argument_count(self):
         """Test branch with wrong argument count raises error."""
         toks = [tokens.Operation("BR", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Branch(toks, {})
         
         with pytest.raises(Exception) as exc_info:
@@ -195,25 +301,25 @@ class TestJump:
             tokens.Operation("JMP", 1),
             tokens.Register("R7", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Jump(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("1100")
+        assert result.startswith(opcode("JMP"))
+        # Base register (R7) in bits 7-9
+        assert result[7:10] == REGS["R7"]
         assert result[4] == "0"  # Register mode
     
     def test_ret_instruction(self):
         """Test RET instruction (no arguments)."""
         toks = [tokens.Operation("RET", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Jump(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("1100")
         assert result[4:7] == "000"
-        assert result[7:10] == "111"  # R7
+        assert result.startswith(opcode("RET"))
+        assert result[7:10] == REGS["R7"]
     
     def test_jsr_with_label(self):
         """Test JSR instruction with label."""
@@ -221,14 +327,15 @@ class TestJump:
             tokens.Operation("JSR", 1),
             tokens.Label("SUBROUTINE", 1)
         ]
-        toks[0].addr = 0x3000
         symbols_table = {"SUBROUTINE": {"address": 0x3050, "line": 10}}
         stmt = statements.Jump(toks, symbols_table)
-        
-        # Label resolution will fail without proper address setup
-        # This tests the structure, actual resolution needs proper setup
-        assert stmt.tokens[1].lexeme == "SUBROUTINE"
+        stmt.addr = 0x3000
+        result = stmt.resolve()
 
+        assert len(result) == 16
+        assert result.startswith(opcode("JSR"))
+        assert result[4] == "1"  # PCoffset mode
+        assert int(result[5:], 2) == 0x3050 - 0x3000 - 1
 
 class TestLoad:
     """Tests for Load statement resolution."""
@@ -240,12 +347,16 @@ class TestLoad:
             tokens.Register("R0", 1),
             tokens.Label("LABEL", 1)
         ]
-        toks[0].addr = 0x3000
         symbols_table = {"LABEL": {"address": 0x3005, "line": 5}}
         stmt = statements.Load(toks, symbols_table)
+        stmt.addr = 0x3000
+        result = stmt.resolve()
         
-        # Will need proper address setup for full resolution
-        assert len(stmt.tokens) == 3
+        assert len(result) == 16
+        assert result.startswith(opcode("LD"))
+        assert result[4:7] == "000"
+        assert int(result[10:], 2) == 0x3005 - 0x3000 - 1
+        assert result[7:10] == REGS["R0"]
     
     def test_ldr_instruction(self):
         """Test LDR instruction."""
@@ -255,12 +366,15 @@ class TestLoad:
             tokens.Register("R2", 1),
             tokens.Number("#5", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Load(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("0110")  # LDR opcode
+        assert result.startswith(opcode("LDR"))  # LDR opcode
+        # DR and base register
+        assert result[4:7] == REGS["R1"]
+        assert result[7:10] == REGS["R2"]
+        assert result[10:16] == imm(5, 6)
     
     def test_lea_instruction(self):
         """Test LEA instruction."""
@@ -269,12 +383,16 @@ class TestLoad:
             tokens.Register("R0", 1),
             tokens.Label("LABEL", 1)
         ]
-        toks[0].addr = 0x3000
         symbols_table = {"LABEL": {"address": 0x3005, "line": 5}}
         stmt = statements.Load(toks, symbols_table)
+        stmt.addr = 0x3000
+        result = stmt.resolve()
         
-        assert len(stmt.tokens) == 3
-
+        assert len(result) == 16
+        assert result.startswith(opcode("LEA"))
+        assert result[4:7] == "000"
+        assert result[7:10] == REGS["R0"]
+        assert int(result[7:16], 2) == 0x3005 - 0x3000 - 1
 
 class TestLogical:
     """Tests for Logical statement resolution."""
@@ -286,12 +404,13 @@ class TestLogical:
             tokens.Register("R1", 1),
             tokens.Register("R2", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Logical(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("1001")  # NOT opcode
+        assert result.startswith(opcode("NOT"))  # NOT opcode
+        assert result[7:10] == REGS["R2"]
+        assert result[4:7] == REGS["R1"]
         assert result.endswith("111111")
     
     def test_and_with_register(self):
@@ -302,13 +421,16 @@ class TestLogical:
             tokens.Register("R2", 1),
             tokens.Register("R3", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Logical(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("0101")  # AND opcode
-        assert result[12] == "0"  # Register mode
+        assert result.startswith(opcode("AND"))  # AND opcode
+        # DR, SR1, SR2 (register mode)
+        assert result[4:7] == REGS["R1"]
+        assert result[7:10] == REGS["R2"]
+        assert result[10:13] == "000"  # Register mode
+        assert result[13:16] == REGS["R3"]
     
     def test_and_with_immediate(self):
         """Test AND instruction with immediate."""
@@ -318,12 +440,16 @@ class TestLogical:
             tokens.Register("R2", 1),
             tokens.Number("#5", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Logical(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
+        assert result.startswith(opcode("AND"))
+        # DR, SR1, imm flag and value
+        assert result[4:7] == REGS["R1"]
+        assert result[7:10] == REGS["R2"]
         assert result[10] == "1"  # Immediate mode
+        assert result[11:16] == imm(5, 5)
 
 
 class TestStore:
@@ -336,12 +462,16 @@ class TestStore:
             tokens.Register("R0", 1),
             tokens.Label("LABEL", 1)
         ]
-        toks[0].addr = 0x3000
         symbols_table = {"LABEL": {"address": 0x3005, "line": 5}}
         stmt = statements.Store(toks, symbols_table)
+        stmt.addr = 0x3000
+        result = stmt.resolve()
         
-        # Will need proper address setup for full resolution
-        assert len(stmt.tokens) == 3
+        assert len(result) == 16
+        assert result.startswith(opcode("ST"))
+        # SR, offset
+        assert result[4:7] == REGS["R0"]
+        assert int(result[7:], 2) == 0x3005 - 0x3000 - 1
     
     def test_str_instruction(self):
         """Test STR instruction."""
@@ -351,12 +481,15 @@ class TestStore:
             tokens.Register("R2", 1),
             tokens.Number("#5", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Store(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("0111")  # STR opcode
+        assert result.startswith(opcode("STR"))  # STR opcode
+        # SR and base register
+        assert result[4:7] == REGS["R1"]
+        assert result[7:10] == REGS["R2"]
+        assert result[10:16] == imm(5, 6)
 
 
 class TestTrap:
@@ -365,33 +498,35 @@ class TestTrap:
     def test_getc_instruction(self):
         """Test GETC trap instruction."""
         toks = [tokens.Operation("GETC", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Trap(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.startswith("1111")  # TRAP opcode
-        assert result.endswith(f"{32+0:012b}")
+        assert result.startswith(opcode("GETC"))  # TRAP opcode
+        assert result[4:8] == "0000"
+        assert result.endswith(f"{0x20+0:08b}")
     
     def test_puts_instruction(self):
         """Test PUTS trap instruction."""
         toks = [tokens.Operation("PUTS", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Trap(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.endswith(f"{32+2:012b}")
+        assert result.startswith(opcode("PUTS"))
+        assert result[4:8] == "0000"
+        assert result.endswith(f"{0x20+2:08b}")
     
     def test_halt_instruction(self):
         """Test HALT trap instruction."""
         toks = [tokens.Operation("HALT", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Trap(toks, {})
         result = stmt.resolve()
         
         assert len(result) == 16
-        assert result.endswith(f"{32+5:012b}")
+        assert result.startswith(opcode("HALT"))
+        assert result[4:8] == "0000"
+        assert result.endswith(f"{0x20+5:08b}")
     
     def test_trap_with_argument_raises_error(self):
         """Test trap instruction with argument raises error."""
@@ -399,7 +534,6 @@ class TestTrap:
             tokens.Operation("HALT", 1),
             tokens.Register("R0", 1)
         ]
-        toks[0].addr = 0x3000
         stmt = statements.Trap(toks, {})
         
         with pytest.raises(Exception) as exc_info:
@@ -413,8 +547,8 @@ class TestStatementBase:
     def test_label_addr_undefined_label(self):
         """Test that undefined label raises StmtError."""
         toks = [tokens.Operation("LD", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Statement(toks, {})
+        stmt.addr = 0x3000
         
         with pytest.raises(statements.StmtError) as exc_info:
             stmt.label_addr("UNDEFINED")
@@ -423,9 +557,9 @@ class TestStatementBase:
     def test_label_addr_defined_label(self):
         """Test label address calculation."""
         toks = [tokens.Operation("LD", 1)]
-        toks[0].addr = 0x3000
         symbols_table = {"LABEL": {"address": 0x3005, "line": 5}}
         stmt = statements.Statement(toks, symbols_table)
+        stmt.addr = 0x3000
         
         result = stmt.label_addr("LABEL")
         # Offset should be 0x3005 - 0x3000 - 1 = 4
@@ -434,7 +568,6 @@ class TestStatementBase:
     def test_to_hex(self):
         """Test to_hex conversion."""
         toks = [tokens.Operation("ADD", 1)]
-        toks[0].addr = 0x3000
         stmt = statements.Statement(toks, {})
         
         hex_val = stmt.to_hex()
