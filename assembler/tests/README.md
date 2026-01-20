@@ -54,25 +54,8 @@ Get coverage report:
 coverage report -m
 ```
 
-Current coverage:
-```
-Name                        Stmts   Miss  Cover   Missing
----------------------------------------------------------
-matcher.py                     10      0   100%
-parser.py                      18      1    94%   22
-pre_parsers.py                 46      0   100%
-statements.py                 158     16    90%   27, 44, 63, 77, 99, 103, 106-107, 125, 131, 145, 148, 168, 172, 191, 195
-tests/__init__.py               0      0   100%
-tests/test_integration.py     164      3    98%   118, 179-180
-tests/test_pre_parsers.py     115      0   100%
-tests/test_statements.py      232      0   100%
-tests/test_tokenizer.py       100      0   100%
-tests/test_tokens.py          118      0   100%
-tokenizer.py                   50      0   100%
-tokens.py                      55      1    98%   10
----------------------------------------------------------
-TOTAL                        1066     21    98%
-```
+You can compare and should update the coverage in `tests/coverage.txt`
+
 
 The test suite covers:
 
