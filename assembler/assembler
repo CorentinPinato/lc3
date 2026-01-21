@@ -1,92 +1,86 @@
 #!/usr/bin/env python3
 
 import sys
-import pre_parsers
-import tokenizer
-import parser
+import assembly_service
 
-lines = [
-    ".ORIG x3000",
-    "LEA R0, HELLO",
-    "PUTS",
-    "HALT",
-    'HELLO .STRINGZ "Hello"',
-    ".END"
-]
-
-ARGS = sys.argv
-
-def read(filename):
-    with open(filename, "r") as file:
-        return [line.rstrip('\n') for line in file]
+def read_lines(filename):
+    with open(filename, "r", encoding="utf-8") as file:
+        return [line.rstrip("\n") for line in file]
 
 
-def write(filename, data):
+def write_obj(filename, binaries, byteorder="big"):
     with open(filename, "wb") as file:
-        for d in data:
-            file.write(int(d, 2).to_bytes(2))
+        for b in binaries:
+            file.write(int(b, 2).to_bytes(2, byteorder=byteorder))
+
 
 def write_txt(filename, data):
     with open(filename, "w", encoding="utf-8") as file:
         file.writelines(data)
 
-lines = read(ARGS[1])
 
-tokenized = tokenizer.tokenize(lines.copy())
+def build_listing(lines, stmts, symbols_table):
+    # invert symbols to address -> label for listing
+    addr_to_label = {f"x{v['address']:04X}": k for k, v in symbols_table.items()}
 
-origin = pre_parsers.get_origin(tokenized)
-pre_parsers.has_end(tokenized)
-symbols = pre_parsers.symbols(tokenized, origin)
-unlabeled = pre_parsers.remove_symbols(tokenized)
+    table = [["ADDR", "HEX", "BINARY", "LABEL", "LINE", "CODE"]]
+    stmt_idx = 0
 
-stmts = parser.parse(unlabeled, symbols)
+    for idx, line in enumerate(lines):
+        line_num = idx + 1
 
-symbols = { f"x{v['address']:04X}":k for k,v in symbols.items() }
-table = [
-    ["ADDR", "HEX", "BINARY", "LABEL", "LINE", "CODE"]
-]
-stmt_idx = 0
-for idx,line in enumerate(lines):
-    line_num = idx + 1
+        stmt = None
+        if stmt_idx < len(stmts) and stmts[stmt_idx].line == line_num:
+            stmt = stmts[stmt_idx]
 
-    stmt = stmts[stmt_idx] if stmts[stmt_idx].line == line_num else None
-    addr = f"x{stmt.addr:04X}" if stmt and stmt.addr is not None else ""
+        addr = f"x{stmt.addr:04X}" if stmt and stmt.addr is not None else ""
 
-    binary = stmt.resolve() if stmt else ""
-    long_binary = isinstance(binary, list)
+        binary = stmt.resolve() if stmt else ""
+        long_binary = isinstance(binary, list)
+        rest = []
+        if long_binary:
+            binary, *rest = binary
 
-    if long_binary:
-        binary, *rest = binary
+        hexa = f"x{int(binary, 2):04X}" if binary else ""
+        label = addr_to_label.get(addr, "")
 
-    hexa = f"x{int(binary, 2):04X}" if binary else ""
-    label = symbols.get(addr, "")
+        if stmt:
+            stmt_idx += 1
 
-    if stmt:
-        stmt_idx += 1
+        table.append([addr, hexa, binary, label, line_num, line])
 
-    table.append([addr, hexa, binary, label, line_num, line])
+        if long_binary and stmt and stmt.addr is not None:
+            a = stmt.addr + 1
+            for b in rest:
+                table.append([f"x{int(a):04X}", f"x{int(b, 2):04X}", b, "", "", ""])
+                a += 1
 
-    if long_binary:
-        addr = stmt.addr + 1
-        for b in rest:
-            table.append([f"x{int(addr):04X}", f"x{int(b, 2):04X}", b, "", "", ""])
-            addr += 1
+    return ["{0:6}| {1:6}| {2:16}| {3:20}| {4:4}| {5:}\n".format(*row) for row in table]
 
-lst_text = []
-for row in table:
-    lst_text.append("{0:6}| {1:6}| {2:16}| {3:20}| {4:4}| {5:}\n".format(*row))
 
-binaries = []
-for b in [s.resolve() for s in stmts]:
-    if b is None or b == "":
-        continue
-    if isinstance(b, list):
-        binaries += b
-    else:
-        binaries.append(b)
+def main(argv):
+    if len(argv) < 1:
+        raise SystemExit("Usage: assembler <file.asm>")
 
-write(ARGS[1].replace('.asm', '.obj'), binaries)
-write_txt(ARGS[1].replace('.asm', '.sym'), [f"{v:20}{"":10}{k}\n" for k,v in symbols.items()])
-write_txt(ARGS[1].replace('.asm', '.lst'), lst_text)
-write_txt(ARGS[1].replace('.asm', '.bin'), [f"{x}\n" for x in binaries])
-write_txt(ARGS[1].replace('.asm', '.hex'), [f"{int(x, 2):04X}\n" for x in binaries])
+    asm_path = argv[0]
+    lines = read_lines(asm_path)
+
+    stmts, symbols_table, binaries = assembly_service.assemble_lines(lines)
+
+    lst_text = build_listing(lines, stmts, symbols_table)
+
+    obj_path = asm_path.replace(".asm", ".obj")
+    sym_path = asm_path.replace(".asm", ".sym")
+    lst_path = asm_path.replace(".asm", ".lst")
+    bin_path = asm_path.replace(".asm", ".bin")
+    hex_path = asm_path.replace(".asm", ".hex")
+
+    write_obj(obj_path, binaries)
+    write_txt(sym_path, [f"{label:20}{'':10}x{meta['address']:04X}\n" for label, meta in symbols_table.items()])
+    write_txt(lst_path, lst_text)
+    write_txt(bin_path, [f"{x}\n" for x in binaries])
+    write_txt(hex_path, [f"{int(x, 2):04X}\n" for x in binaries])
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
