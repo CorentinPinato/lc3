@@ -73,7 +73,7 @@ class Branch(Statement):
 
         if size != 2:
             raise Exception(f"Error on line {self.line}: Operation takes 1 argument, {size-1} found.")
-        if not isinstance(tokens[1], Tokens.Label) and not isinstance(tokens[1], Tokens.Label):
+        if not isinstance(tokens[1], Tokens.Label) and not isinstance(tokens[1], Tokens.Number):
             raise Exception(f"Error on line {self.line}: Operation only takes a `Label` or `Number` argument.")
 
         tokens = [Tokens.Number(self.label_addr(t.lexeme), t.line) if isinstance(t, Tokens.Label) else t for t in tokens]
