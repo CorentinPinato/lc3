@@ -73,11 +73,18 @@ OPERATIONS = {
     # TRAP
     "TRAP": { "GETC": "1111", "OUT": "1111", "IN": "1111", "PUTS": "1111", "HALT": "1111" }
 }
+
+# Precompute flat lookup structures at module load time
+OPCODE_MAP = {op: code for category in OPERATIONS.values() for op, code in category.items()}
+OPERATION_SET = set(OPCODE_MAP.keys())
+
 class Operation(Token):
     @classmethod
     def match(cls, lexeme):
-        return lexeme in [x for xs in list(OPERATIONS.values()) for (x, _) in xs.items()]
+        return lexeme in OPERATION_SET
 
     def to_bin(self, size):
-        value = dict([x for xs in list(OPERATIONS.values()) for x in xs.items()])[self.lexeme]
+        if self.lexeme not in OPCODE_MAP:
+            raise ValueError(f"Unknown operation: {self.lexeme}")
+        value = OPCODE_MAP[self.lexeme]
         return f"{int(value, 2):0{size}b}"
