@@ -1,7 +1,5 @@
 """Integration tests for the full assembly pipeline."""
 import pytest
-import tempfile
-import os
 import statements
 from tests.conftest import run_pipeline
 
