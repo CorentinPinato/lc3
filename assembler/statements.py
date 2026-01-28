@@ -1,8 +1,5 @@
 import tokens as Tokens
-
-class StmtError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
+from errors import AsmError, AsmSyntaxError, AsmSemanticError
 
 class Statement:
     def __init__(self, tokens, symbols_table):
@@ -15,7 +12,7 @@ class Statement:
         address = self.symbols_table.get(label, False)
         if address:
             return f"#{address['address'] - self.addr - 1}"
-        raise StmtError(f"Undefined Label '{label}' used on line {self.line}.")
+        raise AsmSemanticError(f"Undefined Label '{label}' used.", self.line)
 
     def resolve(self):
         return f"{0:016b}"
@@ -35,13 +32,13 @@ class Arithmetic(Statement):
         tokens = self.tokens
         size = len(tokens)
         if size != 4:
-            raise Exception(f"Error on line {self.line}: Operation takes 3 arguments, {size} found.")
+            raise AsmSyntaxError(f"Operation takes 3 arguments, {size} found.", self.line)
 
         if isinstance(tokens[3], Tokens.Register):
             return tokens[0].to_bin(4) + tokens[1].to_bin(3) + tokens[2].to_bin(3) + "000" + tokens[3].to_bin(3)
         if isinstance(tokens[3], Tokens.Number):
             return tokens[0].to_bin(4) + tokens[1].to_bin(3) + tokens[2].to_bin(3) + "1" + tokens[3].to_bin(5)
-        raise Exception(f"Error on line {self.line}: Operation takes either a Number or a Register as last argument.")
+        raise AsmSyntaxError(f"Operation takes either a Number or a Register as last argument.", self.line)
 
 class Directive(Statement):
     @classmethod
@@ -54,13 +51,13 @@ class Directive(Statement):
         if size == 1 and tokens[0].lexeme == ".END":
             return ""
         if size != 2:
-            raise Exception(f"Error on line {self.line}: directive takes one value, {size-1} found.")
+            raise AsmSyntaxError(f"Directive takes one value, {size-1} found.", self.line)
 
         if tokens[0].lexeme == '.BLKW':
             return [f"{0:016b}"] * tokens[-1].to_int()
         if isinstance(tokens[1], Tokens.Number) or isinstance(tokens[1], Tokens.String):
             return tokens[1].to_bin(16)
-        raise Exception(f"Error on line {self.line}: directive only takes a `Literal` argument.")
+        raise AsmSyntaxError(f"Directive only takes a Literal argument.", self.line)
 
 class Branch(Statement):
     @classmethod
@@ -72,9 +69,9 @@ class Branch(Statement):
         size = len(tokens)
 
         if size != 2:
-            raise Exception(f"Error on line {self.line}: Operation takes 1 argument, {size-1} found.")
+            raise AsmSyntaxError(f"Operation takes 1 argument, {size-1} found.", self.line)
         if not isinstance(tokens[1], Tokens.Label) and not isinstance(tokens[1], Tokens.Number):
-            raise Exception(f"Error on line {self.line}: Operation only takes a `Label` or `Number` argument.")
+            raise AsmSyntaxError(f"Operation only takes a Label or Number argument.", self.line)
 
         tokens = [Tokens.Number(self.label_addr(t.lexeme), t.line) if isinstance(t, Tokens.Label) else t for t in tokens]
         if tokens[0].lexeme == "BR":
@@ -96,11 +93,11 @@ class Jump(Statement):
 
         if tokens[0].lexeme == "RET":
             if size != 1:
-                raise Exception(f"Error on line {self.line}: Operation takes no argument.")
+                raise AsmSyntaxError(f"Operation takes no argument.", self.line)
             return tokens[0].to_bin(4) + "000" + "111" + "000000"
 
         if size != 2:
-            raise Exception(f"Error on line {self.line}: Operation takes 1 argument, {size-1} found.")
+            raise AsmSyntaxError(f"Operation takes 1 argument, {size-1} found.", self.line)
 
         if isinstance(tokens[1], Tokens.Label):
             flag = "1"
@@ -122,13 +119,13 @@ class Load(Statement):
 
         if tokens[0].lexeme == "LDR":
             if size != 4:
-                raise Exception(f"Error on line {self.line}: Operation takes 3 arguments, {size-1} found.")
+                raise AsmSyntaxError(f"Operation takes 3 arguments, {size-1} found.", self.line)
             return tokens[0].to_bin(4) + tokens[1].to_bin(3) + tokens[2].to_bin(3) + tokens[3].to_bin(6)
 
         tokens = [Tokens.Number(self.label_addr(t.lexeme), t.line) if isinstance(t, Tokens.Label) else t for t in tokens]
 
         if size != 3:
-            raise Exception(f"Error on line {self.line}: Operation takes 2 arguments, {size-1} found.")
+            raise AsmSyntaxError(f"Operation takes 2 arguments, {size-1} found.", self.line)
         return tokens[0].to_bin(4) + tokens[1].to_bin(3) + tokens[2].to_bin(9, True)
 
 class Logical(Statement):
@@ -142,10 +139,10 @@ class Logical(Statement):
 
         if tokens[0].lexeme == "NOT":
             if size != 3:
-                raise Exception(f"Error on line {self.line}: Operation takes 2 arguments, {size-1} found.")
+                raise AsmSyntaxError(f"Operation takes 2 arguments, {size-1} found.", self.line)
             return tokens[0].to_bin(4) + tokens[1].to_bin(3) + tokens[2].to_bin(3) + "111111"
         if size != 4:
-            raise Exception(f"Error on line {self.line}: Operation takes 3 arguments, {size-1} found.")
+            raise AsmSyntaxError(f"Operation takes 3 arguments, {size-1} found.", self.line)
         if isinstance(tokens[-1], Tokens.Register):
             flag = "0"
             offset = "00" + tokens[-1].to_bin(3)
@@ -165,11 +162,11 @@ class Store(Statement):
 
         if tokens[0].lexeme == "STR":
             if size != 4:
-                raise Exception(f"Error on line {self.line}: Operation takes 3 arguments, {size-1} found.")
+                raise AsmSyntaxError(f"Operation takes 3 arguments, {size-1} found.", self.line)
             return tokens[0].to_bin(4) + tokens[1].to_bin(3) + tokens[2].to_bin(3) + tokens[3].to_bin(6)
 
         if size != 3:
-            raise Exception(f"Error on line {self.line}: Operation takes 2 arguments, {size-1} found.")
+            raise AsmSyntaxError(f"Operation takes 2 arguments, {size-1} found.", self.line)
         laddr = Tokens.Number(self.label_addr(tokens[2].lexeme), self.line)
         return tokens[0].to_bin(4) + tokens[1].to_bin(3) + laddr.to_bin(9, True)
 
@@ -182,7 +179,7 @@ class Trap(Statement):
         tokens = self.tokens
         size = len(tokens)
         if size > 1:
-            raise Exception(f"Error on line {self.line}: Operation does not take arguments, {size-1} found.")
+            raise AsmSyntaxError(f"Operation does not take arguments, {size-1} found.", self.line)
         opcode = tokens[0].to_bin(4)
         match tokens[0].lexeme:
             case "GETC":
