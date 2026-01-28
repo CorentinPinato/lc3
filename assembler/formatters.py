@@ -1,16 +1,32 @@
-"""Presenters module for formatting assembler output.
+"""Formatters module for formatting assembler output.
 
 Separates domain logic from presentation concerns. Provides formatters that
 transform assembly results into view models or strings for various output formats
 (.lst, .sym, .bin, .hex).
+
+Uses a Formatter interface pattern where each formatter implements a format() method.
 """
 
+from abc import ABC, abstractmethod
 
-class SymbolPresenter:
+
+class Formatter(ABC):
+    """Abstract base class for output formatters."""
+
+    @abstractmethod
+    def format(self, *args, **kwargs):
+        """Format the input into output lines for file writing.
+
+        Returns:
+            List[str] of formatted lines ready for output
+        """
+        pass
+
+
+class SymbolFormatter(Formatter):
     """Formats symbol table for .sym file output."""
 
-    @staticmethod
-    def format_symbol_lines(symbols_table):
+    def format(self, symbols_table):
         """Format symbol table as lines for .sym file.
 
         Args:
@@ -25,11 +41,10 @@ class SymbolPresenter:
         ]
 
 
-class BinaryPresenter:
-    """Formats binary data for .bin and .hex file outputs."""
+class BinaryFormatter(Formatter):
+    """Formats binary data for .bin file output."""
 
-    @staticmethod
-    def format_binary_lines(binaries):
+    def format(self, binaries):
         """Format binary strings for .bin file.
 
         Args:
@@ -40,8 +55,11 @@ class BinaryPresenter:
         """
         return [f"{b}\n" for b in binaries]
 
-    @staticmethod
-    def format_hex_lines(binaries):
+
+class HexFormatter(Formatter):
+    """Formats binary data as hex for .hex file output."""
+
+    def format(self, binaries):
         """Format binary strings as hex for .hex file.
 
         Args:
@@ -53,11 +71,10 @@ class BinaryPresenter:
         return [f"{int(b, 2):04X}\n" for b in binaries]
 
 
-class ListingPresenter:
+class ListingFormatter(Formatter):
     """Formats assembly listing table for .lst file output."""
 
-    @staticmethod
-    def format_listing(lines, stmts, symbols_table):
+    def format(self, lines, stmts, symbols_table):
         """Format a detailed listing table from assembly lines and statements.
 
         Domain-agnostic: takes parsed results and produces a formatted view.

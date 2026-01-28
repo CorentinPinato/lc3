@@ -1,6 +1,6 @@
 """Writer module for assembler output files.
 
-Handles low-level I/O operations only. Formatting is delegated to presenters.
+Handles low-level I/O operations only. Formatting is delegated to formatters.
 """
 
 

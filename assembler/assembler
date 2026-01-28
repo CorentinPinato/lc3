@@ -4,7 +4,7 @@ import sys
 import assembly_service
 from reader import Reader
 from writer import Writer
-from presenters import ListingPresenter, SymbolPresenter, BinaryPresenter
+from formatters import ListingFormatter, SymbolFormatter, BinaryFormatter, HexFormatter
 from errors import AsmError
 
 
@@ -13,7 +13,7 @@ def main(argv):
         raise SystemExit("Usage: assembler <file.asm>")
 
     asm_path = argv[0]
-    
+
     try:
         lines = Reader.read_lines(asm_path)
         stmts, symbols_table, binaries = assembly_service.assemble_lines(lines)
@@ -26,11 +26,17 @@ def main(argv):
         print(f"Internal Error: {e}", file=sys.stderr)
         sys.exit(2)
 
-    # Format outputs using presenters
-    lst_text = ListingPresenter.format_listing(lines, stmts, symbols_table)
-    sym_lines = SymbolPresenter.format_symbol_lines(symbols_table)
-    bin_lines = BinaryPresenter.format_binary_lines(binaries)
-    hex_lines = BinaryPresenter.format_hex_lines(binaries)
+    # Create formatter instances
+    listing_formatter = ListingFormatter()
+    symbol_formatter = SymbolFormatter()
+    binary_formatter = BinaryFormatter()
+    hex_formatter = HexFormatter()
+
+    # Format outputs using formatters
+    lst_text = listing_formatter.format(lines, stmts, symbols_table)
+    sym_lines = symbol_formatter.format(symbols_table)
+    bin_lines = binary_formatter.format(binaries)
+    hex_lines = hex_formatter.format(binaries)
 
     # Prepare output paths
     obj_path = asm_path.replace(".asm", ".obj")
