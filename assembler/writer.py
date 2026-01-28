@@ -10,7 +10,7 @@ class Writer:
     @staticmethod
     def write_obj(filename, binaries, byteorder="big"):
         """Write binary values to an object file in binary format.
-        
+
         Args:
             filename: Path to output .obj file
             binaries: List of binary strings (e.g., "0000000000000001")
@@ -23,7 +23,7 @@ class Writer:
     @staticmethod
     def write_txt(filename, data):
         """Write text data to a file.
-        
+
         Args:
             filename: Path to output text file
             data: List of strings to write

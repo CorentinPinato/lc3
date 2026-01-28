@@ -7,10 +7,10 @@ class Reader:
     @staticmethod
     def read_lines(filename):
         """Read lines from an assembly file, stripping newlines.
-        
+
         Args:
             filename: Path to assembly file
-            
+
         Returns:
             List of source lines with newlines removed
         """

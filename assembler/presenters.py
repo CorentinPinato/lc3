@@ -12,10 +12,10 @@ class SymbolPresenter:
     @staticmethod
     def format_symbol_lines(symbols_table):
         """Format symbol table as lines for .sym file.
-        
+
         Args:
             symbols_table: Dict[label -> {address, line}]
-            
+
         Returns:
             List[str] of formatted symbol lines
         """
@@ -31,10 +31,10 @@ class BinaryPresenter:
     @staticmethod
     def format_binary_lines(binaries):
         """Format binary strings for .bin file.
-        
+
         Args:
             binaries: List[str] of 16-bit binary strings
-            
+
         Returns:
             List[str] of formatted binary lines
         """
@@ -43,10 +43,10 @@ class BinaryPresenter:
     @staticmethod
     def format_hex_lines(binaries):
         """Format binary strings as hex for .hex file.
-        
+
         Args:
             binaries: List[str] of 16-bit binary strings
-            
+
         Returns:
             List[str] of formatted hex lines
         """
@@ -59,14 +59,14 @@ class ListingPresenter:
     @staticmethod
     def format_listing(lines, stmts, symbols_table):
         """Format a detailed listing table from assembly lines and statements.
-        
+
         Domain-agnostic: takes parsed results and produces a formatted view.
-        
+
         Args:
             lines: Original assembly source lines
             stmts: List of parsed Statement objects
             symbols_table: Dict[label -> {address, line}]
-            
+
         Returns:
             List[str] of formatted listing lines
         """
@@ -91,7 +91,7 @@ class ListingPresenter:
             # Get address and binary representation
             addr = f"x{stmt.addr:04X}" if stmt and stmt.addr is not None else ""
             binary = stmt.resolve() if stmt else ""
-            
+
             # Handle multi-word results (e.g., .BLKW)
             long_binary = isinstance(binary, list)
             rest = []
