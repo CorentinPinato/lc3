@@ -2,6 +2,7 @@
 import pytest
 import statements
 import tokens
+from errors import AsmSyntaxError, AsmSemanticError
 
 
 # Independent opcode oracle for tests (do NOT derive from production code).
@@ -190,9 +191,9 @@ class TestDirective:
         ]
         stmt = statements.Directive(toks, {})
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(AsmSyntaxError) as exc_info:
             stmt.resolve()
-        assert "only takes a `Literal` argument" in str(exc_info.value)
+        assert "only takes a Literal argument" in str(exc_info.value)
 
 
 class TestBranch:
@@ -324,9 +325,9 @@ class TestBranch:
         ]
         stmt = statements.Branch(toks, {})
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(AsmSyntaxError) as exc_info:
             stmt.resolve()
-        assert "only takes a `Label` or `Number` argument" in str(exc_info.value)
+        assert "only takes a Label or Number argument" in str(exc_info.value)
 
 
 class TestJump:
@@ -683,7 +684,7 @@ class TestStatementBase:
         stmt = statements.Statement(toks, {})
         stmt.addr = 0x3000
 
-        with pytest.raises(statements.StmtError) as exc_info:
+        with pytest.raises(AsmSemanticError) as exc_info:
             stmt.label_addr("UNDEFINED")
         assert "Undefined Label" in str(exc_info.value)
 

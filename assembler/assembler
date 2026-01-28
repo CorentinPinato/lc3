@@ -4,6 +4,7 @@ import sys
 import assembly_service
 from reader import Reader
 from writer import Writer
+from errors import AsmError
 
 
 def main(argv):
@@ -11,9 +12,18 @@ def main(argv):
         raise SystemExit("Usage: assembler <file.asm>")
 
     asm_path = argv[0]
-    lines = Reader.read_lines(asm_path)
-
-    stmts, symbols_table, binaries = assembly_service.assemble_lines(lines)
+    
+    try:
+        lines = Reader.read_lines(asm_path)
+        stmts, symbols_table, binaries = assembly_service.assemble_lines(lines)
+    except AsmError as e:
+        # User-facing error: print friendly message without stack trace
+        print(f"Assembler Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        # Internal/unexpected error: print with context for debugging
+        print(f"Internal Error: {e}", file=sys.stderr)
+        sys.exit(2)
 
     lst_text = Writer.build_listing(lines, stmts, symbols_table)
 

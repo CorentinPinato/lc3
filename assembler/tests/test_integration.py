@@ -1,6 +1,7 @@
 """Integration tests for the full assembly pipeline."""
 import pytest
 import statements
+from errors import AsmSemanticError
 from tests.conftest import run_pipeline
 
 
@@ -202,7 +203,7 @@ class TestErrorCases:
 
         result = run_pipeline(lines)
         # Should raise error when resolving
-        with pytest.raises(statements.StmtError) as exc_info:
+        with pytest.raises(AsmSemanticError) as exc_info:
             result.stmts[1].resolve()
         assert "Undefined Label" in str(exc_info.value)
 
