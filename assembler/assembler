@@ -4,6 +4,7 @@ import sys
 import assembly_service
 from reader import Reader
 from writer import Writer
+from formatters import ListingFormatter, SymbolFormatter, BinaryFormatter, HexFormatter
 from errors import AsmError
 
 
@@ -12,7 +13,7 @@ def main(argv):
         raise SystemExit("Usage: assembler <file.asm>")
 
     asm_path = argv[0]
-    
+
     try:
         lines = Reader.read_lines(asm_path)
         stmts, symbols_table, binaries = assembly_service.assemble_lines(lines)
@@ -25,19 +26,31 @@ def main(argv):
         print(f"Internal Error: {e}", file=sys.stderr)
         sys.exit(2)
 
-    lst_text = Writer.build_listing(lines, stmts, symbols_table)
+    # Create formatter instances
+    listing_formatter = ListingFormatter()
+    symbol_formatter = SymbolFormatter()
+    binary_formatter = BinaryFormatter()
+    hex_formatter = HexFormatter()
 
+    # Format outputs using formatters
+    lst_text = listing_formatter.format(lines, stmts, symbols_table)
+    sym_lines = symbol_formatter.format(symbols_table)
+    bin_lines = binary_formatter.format(binaries)
+    hex_lines = hex_formatter.format(binaries)
+
+    # Prepare output paths
     obj_path = asm_path.replace(".asm", ".obj")
     sym_path = asm_path.replace(".asm", ".sym")
     lst_path = asm_path.replace(".asm", ".lst")
     bin_path = asm_path.replace(".asm", ".bin")
     hex_path = asm_path.replace(".asm", ".hex")
 
+    # Write output files
     Writer.write_obj(obj_path, binaries)
-    Writer.write_txt(sym_path, [f"{label:20}{' ':10}x{meta['address']:04X}\n" for label, meta in symbols_table.items()])
+    Writer.write_txt(sym_path, sym_lines)
     Writer.write_txt(lst_path, lst_text)
-    Writer.write_txt(bin_path, [f"{x}\n" for x in binaries])
-    Writer.write_txt(hex_path, [f"{int(x, 2):04X}\n" for x in binaries])
+    Writer.write_txt(bin_path, bin_lines)
+    Writer.write_txt(hex_path, hex_lines)
 
 
 if __name__ == "__main__":
